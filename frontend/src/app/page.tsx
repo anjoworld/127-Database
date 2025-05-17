@@ -36,20 +36,42 @@ export default function Home() {
 
             {/* Nav Items */}
             <div className="flex flex-col items-start px-2 pt-2 space-y-2">
+              {/* Dashboard item */}
               <div
-                className="flex items-center w-full p-2 rounded hover:bg-gray-100 cursor-pointer"
+                className="group flex items-center justify-between w-full p-2 rounded hover:bg-[#5932EA] hover:text-white cursor-pointer"
                 title="Home"
               >
-                <LayoutDashboard size={40} className="w-5 h-5 text-gray-700" />
-                {hovered && <span className="ml-3 text-sm">Dashboard</span>}
+                <div className="flex items-center">
+                  <LayoutDashboard
+                    size={40}
+                    className="w-5 h-5 text-gray-700 group-hover:text-white"
+                  />
+                  {hovered && <span className="ml-3 text-sm">Dashboard</span>}
+                </div>
+
+                {/* > Arrow */}
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white">
+                  &gt;
+                </span>
               </div>
 
+              {/* Ingredients item */}
               <div
-                className="flex items-center w-full p-2 rounded hover:bg-gray-100 cursor-pointer"
+                className="group flex items-center justify-between w-full p-2 rounded hover:bg-[#5932EA] hover:text-white cursor-pointer"
                 title="Ingredients"
               >
-                <ChefHat size={40} className="w-5 h-5 text-gray-700" />
-                {hovered && <span className="ml-3 text-sm">Ingredients</span>}
+                <div className="flex items-center">
+                  <ChefHat
+                    size={40}
+                    className="w-5 h-5 text-gray-700 group-hover:text-white"
+                  />
+                  {hovered && <span className="ml-3 text-sm">Ingredients</span>}
+                </div>
+
+                {/* > Arrow */}
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white">
+                  &gt;
+                </span>
               </div>
             </div>
           </div>
