@@ -4,7 +4,7 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 // Middleware
 app.use(cors());
@@ -35,6 +35,14 @@ app.post('/ingredients', (req, res) => {
 
 app.get('/ingredients', (req, res) => {
   db.all('SELECT * FROM Ingredients', (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.get('/ingredients-stocks', (req, res) => {
+  const query = `SELECT IngredientID, OrderID, Quantity, Location FROM IngredientStock`;
+  db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
