@@ -1,13 +1,15 @@
 'use client';
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CirclePlus } from 'lucide-react';
 
 export default function Dashboard() {
   const [selected, setSelected] = useState<number[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterType, setFilterType] = useState("All");
+  const [ingredientCards, setIngredientCards] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [newIngredient, setNewIngredient] = useState({
     name: '',
@@ -15,12 +17,26 @@ export default function Dashboard() {
     type: ''
   });
 
-  const ingredientCards = [
-    { daysLeft: 0, name: 'Ground Pork', batchId: '051301', quantity: 10, type: 'Meat' },
-    { daysLeft: 1, name: 'Milk', batchId: '051302', quantity: 5, type: 'Dairy' },
-    { daysLeft: 3, name: 'Carrots', batchId: '051303', quantity: 8, type: 'Produce' },
-    { daysLeft: 5, name: 'Spinach', batchId: '051304', quantity: 6, type: 'Produce' },
-  ];
+  useEffect(() => {
+    fetch('http://localhost:3000/ingredients')
+      .then(res => res.json())
+      .then(data => {
+        const enriched = data.map((item: any) => ({
+          ...item,
+          name: item.IngredientName,
+          type: item.IngredientType,
+          batchId: item.BatchID || "N/A",
+          quantity: item.Quantity || 0,
+          daysLeft: item.DaysLeft || 3 // TEMPORARY until actual expiration logic is added
+        }));
+        setIngredientCards(enriched);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch ingredients:', err);
+        setIsLoading(false);
+      });
+  }, []);
 
   const getDayLabel = (days: number) => {
     if (days <= 0) return "Expired";
@@ -46,10 +62,37 @@ export default function Dashboard() {
     setNewIngredient(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    console.log('New Ingredient:', newIngredient);
-    setIsModalOpen(false);
-    setNewIngredient({ name: '', quantity: '', type: '' });
+  const handleSave = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          IngredientName: newIngredient.name,
+          IngredientType: newIngredient.type,
+          Unit: newIngredient.quantity
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to add ingredient');
+
+      const newRes = await fetch('http://localhost:3000/ingredients');
+      const data = await newRes.json();
+      const enriched = data.map((item: any) => ({
+        ...item,
+        name: item.IngredientName,
+        type: item.IngredientType,
+        batchId: item.BatchID || "N/A",
+        quantity: item.Quantity || 0,
+        daysLeft: item.DaysLeft || 3
+      }));
+      setIngredientCards(enriched);
+
+      setIsModalOpen(false);
+      setNewIngredient({ name: '', quantity: '', type: '' });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const filteredIngredients = ingredientCards.filter(ingredient =>
@@ -61,6 +104,10 @@ export default function Dashboard() {
       prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
     );
   };
+
+  if (isLoading) {
+    return <div className="p-8 text-center">Loading ingredients...</div>;
+  }
 
   return (
     <>
@@ -178,7 +225,7 @@ export default function Dashboard() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
             <h2 className="text-xl font-bold mb-4">Add Ingredient</h2>
 
