@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { CirclePlus } from 'lucide-react';
 
+
 export default function Dashboard() {
   const [selected, setSelected] = useState<number[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,42 +19,36 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-  Promise.all([
-    fetch('http://localhost:4000/ingredients').then(res => res.json()),
-    fetch('http://localhost:4000/ingredients-stocks').then(res => res.json())
-  ])
-    .then(([ingredients, stocks]) => {
-      console.log("Ingredients:", ingredients);
-      console.log("Stocks:", stocks);
+    Promise.all([
+      fetch('http://localhost:4000/ingredients').then(res => res.json()),
+      fetch('http://localhost:4000/ingredients-stocks').then(res => res.json())
+    ])
+      .then(([ingredients, stocks]) => {
+        const stockMap = stocks.reduce((acc: any, stockItem: any) => {
+          acc[stockItem.IngredientID] = stockItem;
+          return acc;
+        }, {});
 
-      // Map stock by IngredientID
-      const stockMap = stocks.reduce((acc: any, stockItem: any) => {
-        acc[stockItem.IngredientID] = stockItem;
-        return acc;
-      }, {});
+        const enriched = ingredients.map((item: any) => {
+          const stock = stockMap[item.IngredientID] || {};
+          return {
+            id: item.IngredientID,
+            name: item.IngredientName,
+            type: item.IngredientType,
+            batchId: stock.OrderID || "N/A",
+            quantity: stock.Quantity || 0,
+            daysLeft: 3
+          };
+        });
 
-      const enriched = ingredients.map((item: any) => {
-        const stock = stockMap[item.IngredientID] || {};
-        return {
-          id: item.IngredientID,
-          name: item.IngredientName,
-          type: item.IngredientType,
-          batchId: stock.OrderID || "N/A",
-          quantity: stock.Quantity || 0,
-          daysLeft: 3 // or pull from another source if needed
-        };
+        setIngredientCards(enriched);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch ingredients or stocks:', err);
+        setIsLoading(false);
       });
-
-      setIngredientCards(enriched);
-      setIsLoading(false);
-    })
-    .catch(err => {
-      console.error('Failed to fetch ingredients or stocks:', err);
-      setIsLoading(false);
-    });
-}, []);
-
-
+  }, []);
 
   const getDayLabel = (days: number) => {
     if (days <= 0) return "Expired";
@@ -129,23 +124,24 @@ export default function Dashboard() {
   return (
     <>
       <div className="flex h-screen bg-gray-200 p-4 space-x-4">
-        {/* Left Column */}
         <div className="w-1/2 bg-white rounded shadow p-4 flex flex-col" style={{ height: 'calc(100vh - 5rem)' }}>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Ingredients</h2>
-            <button className="flex items-left mr-2" onClick={() => setIsModalOpen(true)}>
-              <CirclePlus size={40} className="w-5 h-5 text-gray-700 group-hover:text-white" />
+            <button
+              className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-300 transition"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <CirclePlus size={24} className="text-gray-700" />
             </button>
           </div>
 
-          {/* Filter Buttons */}
           <div className="flex space-x-2 mb-4">
             {["All", "Produce", "Dairy", "Spice", "Sweetener", "Meat", "Grain", "Sauce"].map(type => (
               <button
                 key={type}
                 onClick={() => {
                   setFilterType(type);
-                  setSelected([]); // Reset selection on filter change
+                  setSelected([]);
                 }}
                 className={`text-sm px-2 py-1 rounded ${filterType === type ? "underline text-black" : "text-gray-500"}`}
               >
@@ -154,7 +150,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Ingredient Cards */}
           <div className="space-y-2 overflow-y-auto pr-2 flex-1">
             {filteredIngredients.map((card, index) => {
               const color = getCardColor(card.daysLeft);
@@ -183,9 +178,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right Column */}
         <div className="flex-1 space-y-4">
-          {/* Optional: Highlight first selected ingredient at top */}
           {selected.length > 0 && (
             <div className="bg-white p-4 rounded shadow flex">
               <Image
@@ -215,7 +208,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Bottom Box with Multiple Selected Items */}
           <div className="bg-white p-4 rounded shadow space-y-4">
             {selected.map(i => (
               <div key={i} className="flex justify-between items-center">
@@ -230,77 +222,59 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
-
             <div className="mt-4 flex justify-end">
-              <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded">
-                {/* Confirm */}
-              </button>
+              <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded">Confirm</button>
             </div>
           </div>
         </div>
       </div>
-
-    {/* Modern Modal */}
-    {isModalOpen && (
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 animate-fadeIn">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-8 mx-4">
-          <h2 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">Add Ingredient</h2>
-
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name</label>
-              <input
-                type="text"
-                name="name"
-                value={newIngredient.name}
-                onChange={handleFormChange}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-600 transition"
-                placeholder="Enter ingredient name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quantity</label>
-              <input
-                type="number"
-                name="quantity"
-                value={newIngredient.quantity}
-                onChange={handleFormChange}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-600 transition"
-                placeholder="Enter quantity"
-                min="0"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
-              <select
-                name="type"
-                value={newIngredient.type}
-                onChange={handleFormChange}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-600 transition"
-              >
-                <option value="" disabled>
-                  Select type
-                </option>
-                <option value="Meat">Meat</option>
-                <option value="Dairy">Dairy</option>
-                <option value="Produce">Produce</option>
-                <option value="Grain">Grain</option>
-              </select>
-            </div>
+      {isModalOpen && (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded shadow-md w-96">
+          <h3 className="text-lg font-semibold mb-4 text-center">Add New Ingredient</h3>
+          <div className="space-y-2">
+            <input
+              type="text"
+              name="name"
+              placeholder="Name"
+              value={newIngredient.name}
+              onChange={handleFormChange}
+              className="w-full border border-gray-300 p-2 rounded"
+            />
+            <input
+              type="text"
+              name="quantity"
+              placeholder="Quantity"
+              value={newIngredient.quantity}
+              onChange={handleFormChange}
+              className="w-full border border-gray-300 p-2 rounded"
+            />
+            <select
+              name="type"
+              value={newIngredient.type}
+              onChange={handleFormChange}
+              className="w-full border border-gray-300 p-2 rounded"
+            >
+              <option value="">Select Type</option>
+              <option value="Produce">Produce</option>
+              <option value="Dairy">Dairy</option>
+              <option value="Spice">Spice</option>
+              <option value="Sweetener">Sweetener</option>
+              <option value="Meat">Meat</option>
+              <option value="Grain">Grain</option>
+              <option value="Sauce">Sauce</option>
+            </select>
           </div>
-
-          <div className="flex justify-end space-x-4 mt-8">
+          <div className="mt-4 flex justify-end space-x-2">
             <button
+              className="px-4 py-2 bg-gray-300 rounded"
               onClick={() => setIsModalOpen(false)}
-              className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
             >
               Cancel
             </button>
             <button
+              className="px-4 py-2 bg-emerald-500 text-white rounded"
               onClick={handleSave}
-              className="px-5 py-2 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition shadow-md"
             >
               Save
             </button>
@@ -308,7 +282,6 @@ export default function Dashboard() {
         </div>
       </div>
     )}
-
     </>
   );
 }
