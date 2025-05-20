@@ -4,13 +4,15 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { CirclePlus } from 'lucide-react';
 
+const allTypes = ["Produce", "Dairy", "Spice", "Sweetener", "Meat", "Grain", "Sauce"];
 
 export default function Dashboard() {
   const [selected, setSelected] = useState<number[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filterType, setFilterType] = useState("All");
+  const [filterTypes, setFilterTypes] = useState<string[]>([]);
   const [ingredientCards, setIngredientCards] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const [newIngredient, setNewIngredient] = useState({
     name: '',
@@ -108,12 +110,20 @@ export default function Dashboard() {
   };
 
   const filteredIngredients = ingredientCards.filter(ingredient =>
-    filterType === "All" || ingredient.type === filterType
+    filterTypes.length === 0 || filterTypes.includes(ingredient.type)
   );
 
   const toggleSelection = (index: number) => {
     setSelected(prev =>
       prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
+
+  const toggleFilterType = (type: string) => {
+    setFilterTypes(prev =>
+      prev.includes(type)
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
     );
   };
 
@@ -135,19 +145,52 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div className="flex space-x-2 mb-4">
-            {["All", "Produce", "Dairy", "Spice", "Sweetener", "Meat", "Grain", "Sauce"].map(type => (
+          {/* Dropdown Filter with tags */}
+          <div className="relative mb-4 w-full flex items-center space-x-2">
+            <div className="relative w-40">
               <button
-                key={type}
-                onClick={() => {
-                  setFilterType(type);
-                  setSelected([]);
-                }}
-                className={`text-sm px-2 py-1 rounded ${filterType === type ? "underline text-black" : "text-gray-500"}`}
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-left shadow text-sm"
               >
-                {type}
+                Select
+                <span className="float-right">&#9662;</span>
               </button>
-            ))}
+
+              {dropdownOpen && (
+                <div className="absolute mt-1 w-full bg-white border border-gray-300 rounded shadow z-10 max-h-60 overflow-y-auto">
+                  {allTypes.map(type => (
+                    <label key={type} className="flex items-center px-3 py-1 hover:bg-gray-100 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mr-2"
+                        checked={filterTypes.includes(type)}
+                        onChange={() => toggleFilterType(type)}
+                      />
+                      {type}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selected filter tags */}
+            <div className="flex flex-wrap gap-2 max-w-[calc(100%-10rem)]">
+              {filterTypes.map(type => (
+                <div
+                  key={type}
+                  className="flex items-center space-x-1 bg-emerald-200 text-emerald-900 px-2 py-1 rounded-full text-sm select-none"
+                >
+                  <span>{type}</span>
+                  <button
+                    onClick={() => toggleFilterType(type)}
+                    className="text-emerald-900 font-bold hover:text-emerald-700 focus:outline-none"
+                    aria-label={`Remove filter ${type}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2 overflow-y-auto pr-2 flex-1">
@@ -228,60 +271,51 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
       {isModalOpen && (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded shadow-md w-96">
-          <h3 className="text-lg font-semibold mb-4 text-center">Add New Ingredient</h3>
-          <div className="space-y-2">
-            <input
-              type="text"
-              name="name"
-              placeholder="Name"
-              value={newIngredient.name}
-              onChange={handleFormChange}
-              className="w-full border border-gray-300 p-2 rounded"
-            />
-            <input
-              type="text"
-              name="quantity"
-              placeholder="Quantity"
-              value={newIngredient.quantity}
-              onChange={handleFormChange}
-              className="w-full border border-gray-300 p-2 rounded"
-            />
-            <select
-              name="type"
-              value={newIngredient.type}
-              onChange={handleFormChange}
-              className="w-full border border-gray-300 p-2 rounded"
-            >
-              <option value="">Select Type</option>
-              <option value="Produce">Produce</option>
-              <option value="Dairy">Dairy</option>
-              <option value="Spice">Spice</option>
-              <option value="Sweetener">Sweetener</option>
-              <option value="Meat">Meat</option>
-              <option value="Grain">Grain</option>
-              <option value="Sauce">Sauce</option>
-            </select>
-          </div>
-          <div className="mt-4 flex justify-end space-x-2">
-            <button
-              className="px-4 py-2 bg-gray-300 rounded"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="px-4 py-2 bg-emerald-500 text-white rounded"
-              onClick={handleSave}
-            >
-              Save
-            </button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-md w-96">
+            <h3 className="text-lg font-semibold mb-4 text-center">Add New Ingredient</h3>
+            <div className="space-y-2">
+              <input
+                type="text"
+                name="name"
+                placeholder="Name"
+                value={newIngredient.name}
+                onChange={handleFormChange}
+                className="w-full border border-gray-300 p-2 rounded"
+              />
+              <input
+                type="text"
+                name="quantity"
+                placeholder="Quantity"
+                value={newIngredient.quantity}
+                onChange={handleFormChange}
+                className="w-full border border-gray-300 p-2 rounded"
+              />
+              <select
+                name="type"
+                value={newIngredient.type}
+                onChange={handleFormChange}
+                className="w-full border border-gray-300 p-2 rounded"
+              >
+                <option value="">Select Type</option>
+                {allTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-4 flex justify-end space-x-2">
+              <button className="px-4 py-2 bg-gray-300 rounded" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </button>
+              <button className="px-4 py-2 bg-emerald-500 text-white rounded" onClick={handleSave}>
+                Save
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </>
   );
 }
