@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const allTypes = ["Canned Goods", "Carbohydrates", "Condiments", "Dairy", "Fruits", "Meat", "Vegetables"];
 
@@ -11,7 +12,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [previewIngredient, setPreviewIngredient] = useState<any | null>(null); // NEW
+  const [previewIngredient, setPreviewIngredient] = useState<any | null>(null);
+  const [consumeQuantities, setConsumeQuantities] = useState<{ [id: number]: number }>({});
 
   useEffect(() => {
     Promise.all([
@@ -78,6 +80,28 @@ export default function Dashboard() {
         ? prev.filter(t => t !== type)
         : [...prev, type]
     );
+  };
+
+  const handleQuantityChange = (id: number, newQuantity: number) => {
+  if (newQuantity < 0) return; // prevent negative quantities
+  setConsumeQuantities(prev => ({
+    ...prev,
+    [id]: newQuantity
+  }));
+};
+
+  const incrementQuantity = (id: number) => {
+    setConsumeQuantities(prev => ({
+      ...prev,
+      [id]: (prev[id] || 0) + 1
+    }));
+  };
+
+  const decrementQuantity = (id: number) => {
+    setConsumeQuantities(prev => ({
+      ...prev,
+      [id]: Math.max(0, (prev[id] || 0) - 1)
+    }));
   };
 
   if (isLoading) {
@@ -217,45 +241,99 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right Side Details, Ingredients preview */}
-        <div className="flex-1 space-y-4">
+        {/* Right Column: Ingredient Preview + Consume Below */}
+        <div className="flex-1 flex flex-col space-y-4">
+          {/* Preview Section */}
           {previewIngredient ? (
-            <div
-              className="bg-white p-4 rounded shadow"
-              role="region"
-              aria-label="Selected ingredient details"
-            >
-            <h3 className="text-xl font-bold mb-2 tracking-wide">{previewIngredient.name}</h3>
-            <table className="w-full text-sm text-left border-gray-200">
-              <tbody>
-                <tr className="">
-                  <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Quantity</th>
-                  <td className="py-1 px-2 text-gray-600">{previewIngredient.quantity}</td>
-                </tr>
-                <tr className="">
-                  <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Unit</th>
-                  <td className="py-2 px-2 text-gray-600">{previewIngredient.unit}</td>
-                </tr>
-                <tr className="">
-                  <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Type</th>
-                  <td className="py-2 px-2 text-gray-600">{previewIngredient.type}</td>
-                </tr>
-                <tr className="">
-                  <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Purchased Date</th>
-                  <td className="py-2 px-2 text-gray-600">{previewIngredient.purchasedDate}</td>
-                </tr>
-                <tr className="">
-                  <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Expiry</th>
-                  <td className="py-2 px-2 text-gray-600">{previewIngredient.expiryDate}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="bg-white p-4 rounded shadow" role="region" aria-label="Selected ingredient details">
+              <h3 className="text-xl font-bold mb-2 tracking-wide">{previewIngredient.name}</h3>
+              <table className="w-full text-sm text-left border-gray-200">
+                <tbody>
+                  <tr>
+                    <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Quantity</th>
+                    <td className="py-1 px-2 text-gray-600">{previewIngredient.quantity}</td>
+                  </tr>
+                  <tr>
+                    <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Unit</th>
+                    <td className="py-2 px-2 text-gray-600">{previewIngredient.unit}</td>
+                  </tr>
+                  <tr>
+                    <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Type</th>
+                    <td className="py-2 px-2 text-gray-600">{previewIngredient.type}</td>
+                  </tr>
+                  <tr>
+                    <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Purchased Date</th>
+                    <td className="py-2 px-2 text-gray-600">{previewIngredient.purchasedDate}</td>
+                  </tr>
+                  <tr>
+                    <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Expiry</th>
+                    <td className="py-2 px-2 text-gray-600">{previewIngredient.expiryDate}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           ) : (
-            <p className="bg-white p-4 rounded shadow text-gray-500 italic text-center">
+            <p className="text-sm bg-white p-4 rounded shadow text-gray-500 italic text-center">
               Select an ingredient to preview
             </p>
           )}
+
+          {/* Consume Section */}
+          <div className="bg-white p-6 rounded shadow border border-gray-200 h-[375px] flex flex-col">
+            {/* Sticky Header */}
+            <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10 pb-2">
+              <h2 className="text-xl font-bold">Consume</h2>
+              <button className="bg-gray-200 text-sm font-semibold px-2 py-1 rounded hover:bg-gray-300">
+                Confirm Consume
+              </button>
+            </div>
+
+            {/* Scrollable List */}
+            <div className="divide-y overflow-y-auto pr-2">
+              {ingredientCards
+                .filter(card => selected.includes(card.id))
+                .map((card) => (
+                  <div key={card.id} className="py-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-medium">{card.name}</p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-semibold">Batch ID:</span> {card.batchId}<br />
+                        <span className="font-semibold">Purchased Date:</span> {card.purchasedDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4"> 
+                      <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => decrementQuantity(card.id)}
+                            className="px-2 py-1 bg-gray-100 border rounded hover:bg-gray-200"
+                            aria-label="Decrease quantity"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+
+                          <input
+                            type="number"
+                            className="w-12 text-center border rounded [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            value={consumeQuantities[card.id] !== undefined ? consumeQuantities[card.id] : ""}
+                            onChange={(e) => handleQuantityChange(card.id, parseInt(e.target.value) || 0)}
+                          />
+
+                          <button
+                            onClick={() => incrementQuantity(card.id)}
+                            className="px-2 py-1 bg-gray-100 border rounded hover:bg-gray-200"
+                            aria-label="Increase quantity"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+
+                      {/* card.unit is N/A by default */}
+                      <span className="text-sm text-gray-600">{card.quantity} {card.unit} available</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
       </div>
     </>
