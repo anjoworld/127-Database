@@ -48,6 +48,26 @@ app.get('/ingredients-stocks', (req, res) => {
   });
 });
 
+// app.post('/ingredients', (req, res) => {
+//   const { IngredientName, IngredientType, Unit } = req.body;
+//   console.log('Received:', IngredientName, IngredientType, Unit);
+
+//   if (!IngredientName || !IngredientType || !Unit) {
+//     return res.status(400).json({ error: 'Please provide IngredientName, IngredientType, and Unit.' });
+//   }
+
+//   const query = `INSERT INTO Ingredients (IngredientName, IngredientType, Unit) VALUES (?, ?, ?)`;
+
+//   db.run(query, [IngredientName, IngredientType, Unit], function (err) {
+//     if (err) {
+//       console.error('Insert error:', err.message);
+//       return res.status(500).json({ error: err.message });
+//     }
+//     res.status(201).json({ message: 'Ingredient added!', id: this.lastID });
+//   });
+// });
+
+
 app.get('/orders', (req, res) => {
   db.all('SELECT * FROM Orders', (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
