@@ -35,7 +35,7 @@ export default function Dashboard() {
             unit: stock.Unit || "N/A",
             purchasedDate: stock.PurchasedDate || "N/A",
             expiryDate: stock.ExpiryDate || "N/A",
-            daysLeft: 3
+            daysLeft: 3 //Placeholder for days left calculation
           };
         });
 

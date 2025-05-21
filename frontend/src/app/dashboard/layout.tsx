@@ -17,6 +17,7 @@ export default function HeaderLayout({ children }: { children: React.ReactNode }
 
         {/* Navigation Links */}
         <nav className="flex items-center gap-6 text-sm font-medium text-gray-700">
+          <Link href="/dashboard" className="hover:text-black transition underline">Dashboard</Link>
           <Link href="/ingredients" className="hover:text-black transition">Ingredients</Link>
           <Link href="/history" className="hover:text-black transition">History</Link>
           <Link href="/new-order" className="flex items-center gap-1 hover:text-black transition">
