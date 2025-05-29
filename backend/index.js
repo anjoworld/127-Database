@@ -75,6 +75,35 @@ app.get('/orders', (req, res) => {
   });
 });
 
+// Create a new order
+app.post('/orders', (req, res) => {
+  const { SupplierName } = req.body;
+
+  if (!SupplierName) {
+    return res.status(400).json({ error: 'SupplierName is required' });
+  }
+
+  const insertQuery = 'INSERT INTO Orders (SupplierName) VALUES (?)';
+
+  db.run(insertQuery, [SupplierName], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+
+    // `this.lastID` gives the ID of the inserted row
+    res.status(201).json({ orderId: this.lastID });
+  });
+});
+
+// Get all supplier names (or filter by query)
+app.get('/suppliers', (req, res) => {
+  const search = req.query.search || "";
+  const query = `SELECT DISTINCT SupplierName FROM Orders WHERE SupplierName LIKE ? LIMIT 10`;
+  db.all(query, [`%${search}%`], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows.map(r => r.SupplierName));
+  });
+});
+
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
