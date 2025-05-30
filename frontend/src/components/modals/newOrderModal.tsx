@@ -179,15 +179,31 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
         </button>
 
         <div className="mb-4">
-          <div className="flex items-baseline gap-4">
-            <h2 className="text-2xl font-bold">New Order</h2>
-            <p className="ml-5">
-              <span className="font-semibold text-base">Order ID:</span>
-              <span className="font-normal text-base ml-2">{orderId ?? ""}</span>
-            </p>
+          <div className="flex flex-wrap items-center justify-between mb-2">
+            <div className="flex items-baseline gap-4">
+              <h2 className="text-2xl font-bold">New Order</h2>
+              <p>
+                <span className="font-semibold text-base">Order ID:</span>
+                <span className="font-normal text-base ml-2">{orderId ?? ""}</span>
+              </p>
+            </div>
+
+            {orderItems.length > 0 && (
+              <button
+                onClick={() => {
+                  console.log("Order confirmed!", orderItems);
+                  // Replace with actual submit logic
+                }}
+                className="bg-gray-300 hover:bg-gray-400 text-black font-medium text-sm px-4 py-2 mr-5 rounded-sm"
+              >
+                Confirm Order
+              </button>
+            )}
           </div>
-          <hr className="my-2 border-gray-300" />
+
+          <hr className="border-gray-300" />
         </div>
+
 
         {/* Form Row */}
         {!confirmed && (
@@ -248,15 +264,17 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
         {/* After Confirmation */}
         {confirmed && (
           <div className="mt-6 space-y-4">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <div>
                 <p><strong className="mr-2">Batch ID:</strong>{batchId ?? "N/A"}</p>
                 <p><strong className="mr-2">Supplier Name:</strong>{supplierName}</p>
               </div>
-              <div>
+
+              <div className="flex items-center gap-4">
                 <p><strong className="mr-2">Contacts:</strong>{supplierPhone} / {supplierEmail}</p>
               </div>
             </div>
+
 
             <div className="border border-gray-400">
               <div className="grid grid-cols-7 text-sm bg-gray-100 font-medium sticky top-0 z-10">
@@ -265,14 +283,21 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                 <div className="px-2 py-1">Unit</div>
                 <div className="px-2 py-1">ID</div>
                 <div className="px-2 py-1">Type</div>
-                <div className="px-2 py-1">Spoilage Min (in days)</div>
-                <div className="px-2 py-1">Spoilage Max (in days)</div>
+                <div className="px-2 py-1 text-center">
+                  <div>Spoilage Min</div>
+                  <span className="text-xs text-gray-500 block text-center">(in days)</span>
+                </div>
+
+                <div className="px-2 py-1 text-center">
+                  <div>Spoilage Max</div>
+                  <span className="text-xs text-gray-500 block text-center">(in days)</span>
+                </div>
               </div>
 
               {/* Scrollable container */}
               <div className="max-h-60 overflow-y-auto">
                 {orderItems.map((item, index) => (
-                  <div key={index} className="grid grid-cols-6 text-sm border-t border-gray-200">
+                  <div key={index} className="grid grid-cols-7 text-sm border-t border-gray-200">
                     <div className="px-2 py-1">{item.name}</div>
                     <div className="px-2 py-1">{item.quantity}</div>
                     <div className="px-2 py-1">{item.unit}</div>

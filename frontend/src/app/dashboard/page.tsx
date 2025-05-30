@@ -34,7 +34,7 @@ export default function Dashboard() {
             type: item.IngredientType,
             batchId: stock.OrderID || "N/A",
             quantity: stock.Quantity || 0,
-            unit: stock.Unit || "N/A",
+            unit: item.Unit || "N/A",
             purchasedDate: stock.PurchasedDate || "N/A",
             expiryDate: stock.ExpiryDate || "N/A",
             daysLeft: 3 //Placeholder for days left calculation
@@ -231,7 +231,7 @@ export default function Dashboard() {
                     />
                     <div>
                       <p className="font-bold">{card.name}</p>
-                      <p className="text-xs">BatchID: {card.batchId} | Quantity: {card.quantity}</p>
+                      <p className="text-xs">OrderID: {card.batchId} | Quantity: {card.quantity} {card.unit}</p>
                     </div>
                   </div>
                   <span className="text-sm">{label}</span>
@@ -297,7 +297,7 @@ export default function Dashboard() {
                     <div>
                       <p className="text-lg font-medium">{card.name}</p>
                       <p className="text-sm text-gray-700">
-                        <span className="font-semibold">Batch ID:</span> {card.batchId}<br />
+                        <span className="font-semibold">Order ID:</span> {card.batchId}<br />
                         <span className="font-semibold">Purchased Date:</span> {card.purchasedDate}
                       </p>
                     </div>
