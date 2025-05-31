@@ -22,9 +22,10 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
   const [showUnitSuggestions, setShowUnitSuggestions] = useState(false);
   const [activeUnitIndex, setActiveUnitIndex] = useState(-1);
 
+  const [ingredientTouched, setIngredientTouched] = useState(false);
+  const [isIngredientUnknown, setIsIngredientUnknown] = useState(false);
 
-
-  const [newItem, setNewItem] = useState({
+  const [newOrderItem, setNewOrderItem] = useState({
     name: "",
     quantity: 0,
     unit: "",
@@ -34,7 +35,17 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
     spoilageMax: 0,
   });
 
+  const [newIngredient, setNewIngredient] = useState({
+    name: "",
+    quantity: 0,
+    spoilageMin: 0,
+    spoilageMax: 0,
+  });
+
+
   const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editedItem, setEditedItem] = useState<any>(null);
 
   // Fetch supplier suggestions
   useEffect(() => {
@@ -59,30 +70,36 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
     return () => clearTimeout(debounce);
   }, [supplierName]);
 
-  // Fetch ingredient suggestions
   useEffect(() => {
-  const fetchIngredientSuggestions = async () => {
-    if (!newItem.name) {
-      setIngredientSuggestions([]);
-      setActiveIngredientIndex(-1);
-      // setShowIngredientSuggestions(false); // Also hide if empty
-      return;
-    }
+    const fetchIngredientSuggestions = async () => {
+      if (!newOrderItem.name.trim()) {
+        setIngredientSuggestions([]);
+        setShowIngredientSuggestions(false);
+        setActiveIngredientIndex(-1);
+        setIsIngredientUnknown(false);
+        return;
+      }
 
-    try {
-      const res = await fetch(`http://localhost:4000/ingredients?search=${newItem.name}`);
-      const data = await res.json();
+      try {
+        const res = await fetch(`http://localhost:4000/ingredients?search=${newOrderItem.name}`);
+        const data = await res.json();
 
-      setIngredientSuggestions(data);
-      setShowIngredientSuggestions(true);
-    } catch (err) {
-      console.error("Failed to fetch ingredient suggestions", err);
-    }
-  };
+        const filtered = data.filter((i: any) =>
+          i.IngredientName.toLowerCase().includes(newOrderItem.name.toLowerCase())
+        );
 
-  const debounce = setTimeout(fetchIngredientSuggestions, 300);
-  return () => clearTimeout(debounce);
-}, [newItem.name]);
+        setIngredientSuggestions(filtered);
+        setShowIngredientSuggestions(filtered.length > 0);
+        setIsIngredientUnknown(filtered.length === 0);
+      } catch (err) {
+        console.error("Failed to fetch ingredient suggestions", err);
+      }
+    };
+
+    const debounce = setTimeout(fetchIngredientSuggestions, 300);
+    return () => clearTimeout(debounce);
+  }, [newOrderItem.name]);
+
 
 
   const handleCreateOrder = async () => {
@@ -118,16 +135,16 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
   const handleIngredientClick = (name: string) => {
     const selected = ingredientSuggestions.find(i => i.IngredientName === name);
     if (selected) {
-      setNewItem((prev) => ({
+      setNewOrderItem((prev) => ({
         ...prev,
         name: selected.IngredientName,
         id: selected.IngredientID,
         type: selected.IngredientType,
         unit: selected.Unit,
       }));
-      setUnitSuggestions([selected.Unit]); // populate unit suggestions
+      setUnitSuggestions([selected.Unit]);
+      setIsIngredientUnknown(false);
     }
-
     setIngredientSuggestions([]);
     setShowIngredientSuggestions(false);
     setActiveIngredientIndex(-1);
@@ -151,26 +168,163 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleIngredientKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-  if (!showIngredientSuggestions || ingredientSuggestions.length === 0) return;
+    if (!showIngredientSuggestions || ingredientSuggestions.length === 0) return;
 
-  if (e.key === "ArrowDown") {
-    e.preventDefault();
-    setActiveIngredientIndex((prev) => (prev + 1) % ingredientSuggestions.length);
-  } else if (e.key === "ArrowUp") {
-    e.preventDefault();
-    setActiveIngredientIndex((prev) => (prev - 1 + ingredientSuggestions.length) % ingredientSuggestions.length);
-  } else if (e.key === "Enter" && activeIngredientIndex >= 0) {
-    handleIngredientClick(ingredientSuggestions[activeIngredientIndex].IngredientName);
-  } else if (e.key === "Escape") {
-    setShowIngredientSuggestions(false);
-  }
-};
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIngredientIndex((prev) => (prev + 1) % ingredientSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIngredientIndex((prev) => (prev - 1 + ingredientSuggestions.length) % ingredientSuggestions.length);
+    } else if (e.key === "Enter" && activeIngredientIndex >= 0) {
+      handleIngredientClick(ingredientSuggestions[activeIngredientIndex].IngredientName);
+    } else if (e.key === "Escape") {
+      setShowIngredientSuggestions(false);
+    }
+  };
 
+  const handleEditItem = (index: number) => {
+    setEditingIndex(index);
+    setEditedItem({ ...orderItems[index] });
+  };
+
+  const handleSaveEdit = () => {
+    if (editingIndex !== null && editedItem) {
+      const updatedItems = [...orderItems];
+      updatedItems[editingIndex] = editedItem;
+      setOrderItems(updatedItems);
+      setEditingIndex(null);
+      setEditedItem(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditedItem(null);
+  };
+
+  const handleDeleteItem = (index: number) => {
+    const updatedItems = orderItems.filter((_, i) => i !== index);
+    setOrderItems(updatedItems);
+    if (editingIndex === index) {
+      setEditingIndex(null);
+      setEditedItem(null);
+    }
+  };
+
+  const renderOrderItems = () => {
+    return orderItems.map((item, index) => (
+      <div key={index} className="grid grid-cols-8 text-sm border-t border-gray-200 hover:bg-gray-50">
+        {editingIndex === index ? (
+          <>
+            <div className="px-2 py-1">
+              <input
+                type="text"
+                className="w-full border px-1 py-0.5 text-sm"
+                value={editedItem.name}
+                onChange={(e) => setEditedItem({ ...editedItem, name: e.target.value })}
+              />
+            </div>
+            <div className="px-2 py-1">
+              <input
+                type="number"
+                className="w-full border px-1 py-0.5 text-sm"
+                value={editedItem.quantity}
+                onChange={(e) => setEditedItem({ ...editedItem, quantity: +e.target.value })}
+              />
+            </div>
+            <div className="px-2 py-1">
+              <input
+                type="text"
+                className="w-full border px-1 py-0.5 text-sm"
+                value={editedItem.unit}
+                onChange={(e) => setEditedItem({ ...editedItem, unit: e.target.value })}
+              />
+            </div>
+            <div className="px-2 py-1">
+              <input
+                type="text"
+                className="w-full border px-1 py-0.5 text-sm"
+                value={editedItem.id}
+                onChange={(e) => setEditedItem({ ...editedItem, id: e.target.value })}
+              />
+            </div>
+            <div className="px-2 py-1">
+              <input
+                type="text"
+                className="w-full border px-1 py-0.5 text-sm"
+                value={editedItem.type}
+                onChange={(e) => setEditedItem({ ...editedItem, type: e.target.value })}
+              />
+            </div>
+            <div className="px-2 py-1">
+              <input
+                type="number"
+                className="w-full border px-1 py-0.5 text-sm"
+                value={editedItem.spoilageMin}
+                onChange={(e) => setEditedItem({ ...editedItem, spoilageMin: +e.target.value })}
+              />
+            </div>
+            <div className="px-2 py-1">
+              <input
+                type="number"
+                className="w-full border px-1 py-0.5 text-sm"
+                value={editedItem.spoilageMax}
+                onChange={(e) => setEditedItem({ ...editedItem, spoilageMax: +e.target.value })}
+              />
+            </div>
+            <div className="px-2 py-1 flex gap-1">
+              <button
+                onClick={handleSaveEdit}
+                className="bg-green-500 text-white px-1 w-10 text-xs rounded hover:bg-green-600"
+                title="Save"
+              >
+                ✓
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="bg-red-500 text-white px-1 w-10 text-xs rounded hover:bg-red-600"
+                title="Cancel"
+              >
+                ✗
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="px-2 py-1">{item.name}</div>
+            <div className="px-2 py-1">{item.quantity}</div>
+            <div className="px-2 py-1">{item.unit}</div>
+            <div className="px-2 py-1">{item.id}</div>
+            <div className="px-2 py-1">{item.type}</div>
+            <div className="px-2 py-1">{item.spoilageMin}</div>
+            <div className="px-2 py-1">{item.spoilageMax}</div>
+            <div className="px-2 py-1 flex gap-2">
+              <button
+                onClick={() => handleEditItem(index)}
+                className="text-blue-500 hover:text-blue-700 text-xs"
+                title="Edit"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDeleteItem(index)}
+                className="text-red-500 hover:text-red-700 text-xs"
+                title="Delete"
+              >
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+    ));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-[#f5f6fa] rounded-md w-[1000px] p-8 relative shadow-lg">
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-2xl font-light text-black hover:text-gray-600"
@@ -192,7 +346,6 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={() => {
                   console.log("Order confirmed!", orderItems);
-                  // Replace with actual submit logic
                 }}
                 className="bg-gray-300 hover:bg-gray-400 text-black font-medium text-sm px-4 py-2 mr-5 rounded-sm"
               >
@@ -204,8 +357,6 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
           <hr className="border-gray-300" />
         </div>
 
-
-        {/* Form Row */}
         {!confirmed && (
           <div className="relative flex items-center gap-2">
             <label className="text-gray-500 font-light text-sm">Supplier Name:</label>
@@ -261,7 +412,6 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* After Confirmation */}
         {confirmed && (
           <div className="mt-6 space-y-4">
             <div className="flex justify-between items-center">
@@ -275,9 +425,8 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
 
-
             <div className="border border-gray-400">
-              <div className="grid grid-cols-7 text-sm bg-gray-100 font-medium sticky top-0 z-10">
+              <div className="grid grid-cols-8 text-sm bg-gray-100 font-medium sticky top-0 z-10">
                 <div className="px-2 py-1">Name</div>
                 <div className="px-2 py-1">Quantity</div>
                 <div className="px-2 py-1">Unit</div>
@@ -287,40 +436,28 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                   <div>Spoilage Min</div>
                   <span className="text-xs text-gray-500 block text-center">(in days)</span>
                 </div>
-
                 <div className="px-2 py-1 text-center">
                   <div>Spoilage Max</div>
                   <span className="text-xs text-gray-500 block text-center">(in days)</span>
                 </div>
               </div>
 
-              {/* Scrollable container */}
               <div className="max-h-60 overflow-y-auto">
-                {orderItems.map((item, index) => (
-                  <div key={index} className="grid grid-cols-7 text-sm border-t border-gray-200">
-                    <div className="px-2 py-1">{item.name}</div>
-                    <div className="px-2 py-1">{item.quantity}</div>
-                    <div className="px-2 py-1">{item.unit}</div>
-                    <div className="px-2 py-1">{item.id}</div>
-                    <div className="px-2 py-1">{item.type}</div>
-                    <div className="px-2 py-1">{item.spoilageMin}</div>
-                    <div className="px-2 py-1">{item.spoilageMax}</div>
-                  </div>
-                ))}
+                {renderOrderItems()}
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-2 items-center mt-4">
+            <div className="grid grid-cols-8 gap-2 items-center mt-4">
               <div className="relative">
                 <input
+                  type="text"
                   placeholder="Name"
                   className="border px-2 py-1 text-sm w-full"
-                  value={newItem.name}
+                  value={newOrderItem.name}
                   onChange={(e) => {
-                    setNewItem({ ...newItem, name: e.target.value });
-                    setActiveIngredientIndex(-1);
+                    setNewOrderItem({ ...newOrderItem, name: e.target.value });
+                    setIngredientTouched(true);
                   }}
-                  onFocus={() => setShowIngredientSuggestions(false)} //
                   onKeyDown={handleIngredientKeyDown}
                 />
                 {showIngredientSuggestions && ingredientSuggestions.length > 0 && (
@@ -331,12 +468,11 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                         className={`px-2 py-1 cursor-pointer ${
                           idx === activeIngredientIndex ? "bg-gray-200" : "hover:bg-gray-100"
                         }`}
-                        onMouseDown={() => handleIngredientClick(s.IngredientName)} // pass name, not object
+                        onMouseDown={() => handleIngredientClick(s.IngredientName)}
                       >
                         {s.IngredientName}
                       </li>
                     ))}
-
                   </ul>
                 )}
               </div>
@@ -345,16 +481,16 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                 type="number"
                 placeholder="Quantity"
                 className="border px-2 py-1 text-sm"
-                value={newItem.quantity}
-                onChange={(e) => setNewItem({ ...newItem, quantity: +e.target.value })}
+                value={newOrderItem.quantity}
+                onChange={(e) => setNewOrderItem({ ...newOrderItem, quantity: +e.target.value })}
               />
               <div className="relative">
                 <input
                   placeholder="Unit"
                   className="border px-2 py-1 text-sm w-full"
-                  value={newItem.unit}
+                  value={newOrderItem.unit}
                   onChange={(e) => {
-                    setNewItem({ ...newItem, unit: e.target.value });
+                    setNewOrderItem({ ...newOrderItem, unit: e.target.value });
                     setActiveUnitIndex(-1);
                   }}
                   onFocus={() => setShowUnitSuggestions(true)}
@@ -368,7 +504,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                       e.preventDefault();
                       setActiveUnitIndex((prev) => (prev - 1 + unitSuggestions.length) % unitSuggestions.length);
                     } else if (e.key === "Enter" && activeUnitIndex >= 0) {
-                      setNewItem({ ...newItem, unit: unitSuggestions[activeUnitIndex] });
+                      setNewOrderItem({ ...newOrderItem, unit: unitSuggestions[activeUnitIndex] });
                       setShowUnitSuggestions(false);
                     } else if (e.key === "Escape") {
                       setShowUnitSuggestions(false);
@@ -384,7 +520,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                           idx === activeUnitIndex ? "bg-gray-200" : "hover:bg-gray-100"
                         }`}
                         onMouseDown={() => {
-                          setNewItem({ ...newItem, unit });
+                          setNewOrderItem({ ...newOrderItem, unit });
                           setShowUnitSuggestions(false);
                         }}
                       >
@@ -398,36 +534,35 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
               <input
                 placeholder="ID"
                 className="border px-2 py-1 text-sm"
-                value={newItem.id}
-                onChange={(e) => setNewItem({ ...newItem, id: e.target.value })}
+                value={newOrderItem.id}
+                readOnly
+                // onChange={(e) => setNewItem({ ...newItem, id: e.target.value })}
               />
               <input
                 placeholder="Type"
                 className="border px-2 py-1 text-sm"
-                value={newItem.type}
-                onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}
+                value={newOrderItem.type}
+                onChange={(e) => setNewOrderItem({ ...newOrderItem, type: e.target.value })}
               />
               <input
                 type="number"
                 placeholder="Min"
                 className="border px-2 py-1 text-sm"
-                value={newItem.spoilageMin}
-                onChange={(e) => setNewItem({ ...newItem, spoilageMin: +e.target.value })}
+                value={newOrderItem.spoilageMin}
+                onChange={(e) => setNewOrderItem({ ...newOrderItem, spoilageMin: +e.target.value })}
               />
               <input
                 type="number"
                 placeholder="Max"
                 className="border px-2 py-1 text-sm"
-                value={newItem.spoilageMax}
-                onChange={(e) => setNewItem({ ...newItem, spoilageMax: +e.target.value })}
+                value={newOrderItem.spoilageMax}
+                onChange={(e) => setNewOrderItem({ ...newOrderItem, spoilageMax: +e.target.value })}
               />
-            </div>
 
-            <div className="flex justify-end">
               <button
                 onClick={() => {
-                  setOrderItems([...orderItems, newItem]);
-                  setNewItem({
+                  setOrderItems([...orderItems, newOrderItem]);
+                  setNewOrderItem({
                     name: "",
                     quantity: 0,
                     unit: "",
@@ -437,12 +572,82 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                     spoilageMax: 0,
                   });
                 }}
-                className="bg-gray-300 hover:bg-gray-400 text-black font-medium text-sm px-4 py-2 mt-2 rounded-sm"
+                className="bg-gray-300 hover:bg-gray-400 text-black font-medium text-sm px-2 py-1 rounded-sm"
               >
                 Add to Order
               </button>
             </div>
-         </div>       
+
+            {/* Add New Ingredient   */}
+            <div className="col-span-8 mt-2">
+              {/* Display error if ingredient is unknown */}
+              {isIngredientUnknown && ingredientTouched && (
+                <div className="text-xs text-red-600 mt-1">Ingredient unknown.</div>
+              )}
+              {isIngredientUnknown && (
+                <div className="mb-4 border-t pt-4">
+                  <h3 className="mb-2 font-semibold">Add New Ingredient</h3>
+                  <div className="grid grid-cols-5 gap-2 text-sm mb-2">
+                    <div>
+                      <label className="text-gray-500 font-light text-sm">Name:</label>
+                      <input
+                        type="text"
+                        placeholder=""
+                        value={newIngredient.name}
+                        onChange={(e) => setNewIngredient({ ...newIngredient, name: e.target.value })}
+                        className="w-full border px-2 py-1 rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-500 font-light text-sm">Quantity:</label>
+                      <input
+                        type="number"
+                        placeholder="Quantity"
+                        value={newIngredient.quantity}
+                        onChange={(e) => setNewIngredient({ ...newIngredient, quantity: Number(e.target.value) })}
+                        className="w-full border px-2 py-1 rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-500 font-light text-sm">Spoilage Min:</label>
+                      <input
+                        type="number"
+                        placeholder="Min"
+                        value={newIngredient.spoilageMin}
+                        onChange={(e) => setNewIngredient({ ...newIngredient, spoilageMin: Number(e.target.value) })}
+                        className="w-full border px-2 py-1 rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-500 font-light text-sm">Spoilage Max:</label>
+                      <input
+                        type="number"
+                        placeholder="Max"
+                        value={newIngredient.spoilageMax}
+                        onChange={(e) => setNewIngredient({ ...newIngredient, spoilageMax: Number(e.target.value) })}
+                        className="w-full border px-2 py-1 rounded"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        setOrderItems([...orderItems, newIngredient]);
+                        setNewIngredient({
+                          name: "",
+                          quantity: 0,
+                          spoilageMin: 0,
+                          spoilageMax: 0,
+                        });
+                        setIsIngredientUnknown(false);
+                      }}
+                      className="mt-5 bg-gray-300 hover:bg-gray-400 text-black font-medium text-sm px-2 py-1 rounded-sm"
+                    >
+                      Add New Ingredient
+                  </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>       
         )}
       </div>
     </div>
