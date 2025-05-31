@@ -4,10 +4,7 @@ import React, { useEffect, useState } from "react";
 
 export default function NewOrderModal({ onClose }: { onClose: () => void }) {
   const [orderId, setOrderId] = useState<number | null>(null);
-  const [batchId, setBatchId] = useState<number | null>(123); // Placeholder batch ID
   const [supplierName, setSupplierName] = useState("");
-  const [supplierPhone, setSupplierPhone] = useState("");
-  const [supplierEmail, setSupplierEmail] = useState("");
   const [confirmed, setConfirmed] = useState(false);
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -113,9 +110,6 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
       const data = await res.json();
       if (res.ok) {
         setOrderId(data.orderId);
-        setSupplierPhone(data.phone ?? "09123456789");
-        setSupplierEmail(data.email ?? "supplier@example.com");
-        setBatchId(data.batchId ?? 123);
         setConfirmed(true);
       } else {
         console.error("Error creating order:", data.error);
@@ -388,21 +382,6 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                 </ul>
               )}
             </div>
-
-            <label className="text-gray-500 font-light text-sm">Phone no. :</label>
-            <input
-              type="text"
-              className="border border-gray-400 rounded-sm px-2 py-1 w-48 text-sm"
-              value={supplierPhone}
-              onChange={(e) => setSupplierPhone(e.target.value)}
-            />
-            <label className="text-gray-500 font-light text-sm">Email:</label>
-            <input
-              type="email"
-              className="border border-gray-400 rounded-sm px-2 py-1 w-48 text-sm"
-              value={supplierEmail}
-              onChange={(e) => setSupplierEmail(e.target.value)}
-            />
             <button
               onClick={handleCreateOrder}
               className="bg-gray-300 hover:bg-gray-400 text-black font-medium text-sm px-4 py-2 ml-5 rounded-sm"
@@ -416,12 +395,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
           <div className="mt-6 space-y-4">
             <div className="flex justify-between items-center">
               <div>
-                <p><strong className="mr-2">Batch ID:</strong>{batchId ?? "N/A"}</p>
                 <p><strong className="mr-2">Supplier Name:</strong>{supplierName}</p>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <p><strong className="mr-2">Contacts:</strong>{supplierPhone} / {supplierEmail}</p>
               </div>
             </div>
 
