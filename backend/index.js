@@ -103,6 +103,36 @@ app.get('/suppliers', (req, res) => {
   });
 });
 
+//View Orders page
+app.get('/order-items/:orderId', (req, res) => {
+  const orderId = req.params.orderId;
+
+  const query = `
+    SELECT
+      ing.IngredientName,
+      i.Quantity,
+      ing.Unit,
+      i.IngredientID as id,
+      ing.IngredientType,
+      s.SpoilageMinDays as spoilageMin,
+      s.SpoilageMaxDays as spoilageMax,
+      i.OrderID
+    FROM IngredientStock i
+    LEFT JOIN SpoilageInfo s ON i.OrderID = s.OrderID AND i.IngredientID = s.IngredientID
+    JOIN Ingredients ing ON i.IngredientID = ing.IngredientID
+    WHERE i.OrderID = ?
+  `;
+
+  db.all(query, [orderId], (err, rows) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(rows);
+  });
+});
+
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
