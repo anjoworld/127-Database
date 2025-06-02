@@ -174,9 +174,10 @@ app.get('/ingredients-with-daysleft', (req, res) => {
       i.Unit,
       s.OrderID,
       s.Quantity,
-      o.DateReceived,
+      date(o.DateReceived) AS DateReceived,
       sp.SpoilageMinDays,
       sp.SpoilageMaxDays,
+      date(julianday(o.DateReceived) + sp.SpoilageMaxDays) AS ExpiryDate,
       CAST(sp.SpoilageMaxDays - julianday('now') + julianday(o.DateReceived) AS INTEGER) AS DaysLeft 
     FROM IngredientStock s
     JOIN Ingredients i ON s.IngredientID = i.IngredientID

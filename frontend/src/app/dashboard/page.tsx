@@ -31,7 +31,8 @@ export default function Dashboard() {
         const dateMap = dateData.reduce((acc: any, item: any) => {
           acc[item.IngredientID] = {
             daysLeft: item.DaysLeft,
-            dateReceived: item.DateReceived
+            dateReceived: item.DateReceived,
+            expiryDate: item.ExpiryDate
           };
           return acc;
         }, {});
@@ -47,12 +48,18 @@ export default function Dashboard() {
             batchId: stock.OrderID || "N/A",
             quantity: stock.Quantity || 0,
             unit: item.Unit || "N/A",
-            purchasedDate: dateInfo.DateReceived || "N/A",
-            expiryDate: stock.ExpiryDate || "N/A",
+            purchaseDate: dateInfo.dateReceived || "N/A",
+            expiryDate: dateInfo.expiryDate || "N/A",
             daysLeft: dateInfo.daysLeft || "N/A"
-            //? Math.ceil((new Date(stock.ExpiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) //function for calculating the days left 
-            //: null
           };
+        });
+
+        enriched.sort((a, b) => {
+          // If either expiryDate is "N/A", put it at the end
+          if (a.expiryDate === "N/A") return 1;
+          if (b.expiryDate === "N/A") return -1;
+          // Compare as dates
+          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
         });
 
         setIngredientCards(enriched);
@@ -277,7 +284,7 @@ export default function Dashboard() {
                   </tr>
                   <tr>
                     <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Purchased Date</th>
-                    <td className="py-2 px-2 text-gray-600">{previewIngredient.purchasedDate}</td>
+                    <td className="py-2 px-2 text-gray-600">{previewIngredient.purchaseDate}</td>
                   </tr>
                   <tr>
                     <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Expiry</th>
