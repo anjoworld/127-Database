@@ -11,7 +11,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
-
+/*
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,7 +19,7 @@
     --font-poppins: 'Poppins', sans-serif;
   }
 }
-
+*/
 body {
   background: var(--background);
   color: var(--foreground);

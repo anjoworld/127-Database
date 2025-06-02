@@ -18,16 +18,28 @@ export default function Dashboard() {
   useEffect(() => {
     Promise.all([
       fetch('http://localhost:4000/ingredients').then(res => res.json()),
-      fetch('http://localhost:4000/ingredients-stocks').then(res => res.json())
+      fetch('http://localhost:4000/ingredients-stocks').then(res => res.json()),
+      fetch('http://localhost:4000/ingredients-with-daysleft').then(res => res.json())
     ])
-      .then(([ingredients, stocks]) => {
+      .then(([ingredients, stocks, dateData]) => {
         const stockMap = stocks.reduce((acc: any, stockItem: any) => {
           acc[stockItem.IngredientID] = stockItem;
           return acc;
         }, {});
 
+        // Create a map for DaysLeft
+        const dateMap = dateData.reduce((acc: any, item: any) => {
+          acc[item.IngredientID] = {
+            daysLeft: item.DaysLeft,
+            dateReceived: item.DateReceived
+          };
+          return acc;
+        }, {});
+
         const enriched = ingredients.map((item: any) => {
           const stock = stockMap[item.IngredientID] || {};
+          const dateInfo = dateMap[item.IngredientID] || {};
+
           return {
             id: item.IngredientID,
             name: item.IngredientName,
@@ -35,9 +47,11 @@ export default function Dashboard() {
             batchId: stock.OrderID || "N/A",
             quantity: stock.Quantity || 0,
             unit: item.Unit || "N/A",
-            purchasedDate: stock.PurchasedDate || "N/A",
+            purchasedDate: dateInfo.DateReceived || "N/A",
             expiryDate: stock.ExpiryDate || "N/A",
-            daysLeft: 3 //Placeholder for days left calculation
+            daysLeft: dateInfo.daysLeft || "N/A"
+            //? Math.ceil((new Date(stock.ExpiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) //function for calculating the days left 
+            //: null
           };
         });
 
