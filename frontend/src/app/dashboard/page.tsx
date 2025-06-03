@@ -22,14 +22,14 @@ export default function Dashboard() {
       fetch('http://localhost:4000/ingredients-with-daysleft').then(res => res.json())
     ])
       .then(([ingredients, stocks, dateData]) => {
-        const stockMap = stocks.reduce((acc: any, stockItem: any) => {
-          acc[stockItem.IngredientID] = stockItem;
+        const ingredientMap = ingredients.reduce((acc: any, item: any) => {
+          acc[item.IngredientID] = item;
           return acc;
         }, {});
 
         // Create a map for DaysLeft
         const dateMap = dateData.reduce((acc: any, item: any) => {
-          acc[item.IngredientID] = {
+          acc[`${item.IngredientID}_${item.OrderID}`] = {
             daysLeft: item.DaysLeft,
             dateReceived: item.DateReceived,
             expiryDate: item.ExpiryDate
@@ -37,24 +37,25 @@ export default function Dashboard() {
           return acc;
         }, {});
 
-        const enriched = ingredients.map((item: any) => {
-          const stock = stockMap[item.IngredientID] || {};
-          const dateInfo = dateMap[item.IngredientID] || {};
+        const enriched = stocks.map((stockItem: any) => {
+          const ingredient = ingredientMap[stockItem.IngredientID] || {};
+          const dateInfo = dateMap[`${stockItem.IngredientID}_${stockItem.OrderID}`] || {};
 
           return {
-            id: item.IngredientID,
-            name: item.IngredientName,
-            type: item.IngredientType,
-            batchId: stock.OrderID || "N/A",
-            quantity: stock.Quantity || 0,
-            unit: item.Unit || "N/A",
+            id: `${stockItem.IngredientID}_${stockItem.OrderID}`,
+            ingredientId: stockItem.IngredientID,
+            name: ingredient.IngredientName,
+            type: ingredient.IngredientType,
+            batchId: stockItem.OrderID || "N/A",
+            quantity: stockItem.Quantity || 0,
+            unit: ingredient.Unit || "N/A",
             purchaseDate: dateInfo.dateReceived || "N/A",
             expiryDate: dateInfo.expiryDate || "N/A",
             daysLeft: dateInfo.daysLeft || "N/A"
           };
         });
 
-        enriched.sort((a, b) => {
+        enriched.sort((a: any, b: any) => {
           // If either expiryDate is "N/A", put it at the end
           if (a.expiryDate === "N/A") return 1;
           if (b.expiryDate === "N/A") return -1;
@@ -63,6 +64,8 @@ export default function Dashboard() {
         });
 
         setIngredientCards(enriched);
+
+        //setIngredientCards(enriched.filter((item: any) => item.quantity > 0)); //this is the thing to filter out the ingredients that are 0 quantity
         setIsLoading(false);
       })
       .catch(err => {
@@ -90,9 +93,17 @@ export default function Dashboard() {
   );
 
   const toggleSelection = (id: number) => {
-    setSelected(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+    setSelected(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(i => i !== id);
+      } else {
+        setConsumeQuantities(qtyPrev => ({
+          ...qtyPrev,
+          [id]: qtyPrev[id] !== undefined ? qtyPrev[id] : 0
+        }));
+        return [...prev, id];
+      }
+    });
   };
 
   const toggleFilterType = (type: string) => {
@@ -123,6 +134,41 @@ export default function Dashboard() {
       ...prev,
       [id]: Math.max(0, (prev[id] || 0) - 1)
     }));
+  };
+
+  const handleConfirmConsume = async () => {
+    // Only process selected items with a non-zero quantity to consume
+    const itemsToConsume = ingredientCards
+      .filter(card => selected.includes(card.id) && consumeQuantities[card.id] > 0);
+
+    // Send requests to backend
+    await Promise.all(itemsToConsume.map(async (card) => {
+      // Find the OrderID for this card (batchId)
+      const OrderID = card.batchId;
+      const IngredientID = card.id;
+      const QuantityUsed = consumeQuantities[card.id];
+
+      // Send POST request to backend
+      await fetch('http://localhost:4000/use-ingredient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ OrderID, IngredientID, QuantityUsed })
+      });
+    }));
+
+    // Update local ingredientCards state to reflect new quantities
+    setIngredientCards(prev =>
+      prev.map(card =>
+        selected.includes(card.id)
+          ? { ...card, quantity: card.quantity - (consumeQuantities[card.id] || 0) }
+          : card
+      )
+      .filter(card => card.quantity > 0) //this is the thing to filter out the ingredients that are 0 quantity
+    );
+
+    // Clear selection and consume quantities
+    setSelected([]);
+    setConsumeQuantities({});
   };
 
   if (isLoading) {
@@ -304,7 +350,9 @@ export default function Dashboard() {
             {/* Sticky Header */}
             <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10 pb-2">
               <h2 className="text-xl font-bold">Consume</h2>
-              <button className="bg-gray-200 text-sm font-semibold px-2 py-1 rounded hover:bg-gray-300">
+              <button className="bg-gray-200 text-sm font-semibold px-2 py-1 rounded hover:bg-gray-300"
+                onClick={handleConfirmConsume}
+                disabled={selected.length === 0}>
                 Confirm Consume
               </button>
             </div>
@@ -319,7 +367,7 @@ export default function Dashboard() {
                       <p className="text-lg font-medium">{card.name}</p>
                       <p className="text-sm text-gray-700">
                         <span className="font-semibold">Order ID:</span> {card.batchId}<br />
-                        <span className="font-semibold">Purchased Date:</span> {card.purchasedDate}
+                        <span className="font-semibold">Purchased Date:</span> {card.purchaseDate}
                       </p>
                     </div>
                     <div className="flex items-center space-x-4"> 

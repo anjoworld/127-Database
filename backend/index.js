@@ -229,6 +229,14 @@ app.post('/use-ingredient', (req, res) => {
   });
 });
 
+//get all ingredient types and saturate the filters
+app.get('/ingredient-types', (req, res) => {
+  const query = `SELECT DISTINCT IngredientType FROM Ingredients`;
+  db.all(query, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows.map(r => r.IngredientType));
+  });
+});
 
 // 404 handler
 app.use((req, res) => {

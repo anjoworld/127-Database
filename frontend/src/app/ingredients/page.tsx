@@ -21,12 +21,20 @@ export default function IngredientsPage() {
   useEffect(() => {
     Promise.all([
       fetch("http://localhost:4000/ingredients").then(res => res.json()),
-      fetch("http://localhost:4000/ingredients-stocks").then(res => res.json())
+      fetch("http://localhost:4000/ingredients-stocks").then(res => res.json()),
+      fetch("http://localhost:4000/ingredients-with-daysleft").then(res => res.json())
     ])
-      .then(([ingredientsData, stocksData]) => {
+      .then(([ingredientsData, stocksData, daysLeftData]) => {
         const stockMap = Array.isArray(stocksData)
           ? stocksData.reduce((acc: any, stockItem: any) => {
               acc[stockItem.IngredientID] = stockItem;
+              return acc;
+            }, {})
+          : {};
+
+        const daysLeftMap = Array.isArray(daysLeftData)
+          ? daysLeftData.reduce((acc: any, daysLeftItem: any) => {
+              acc[daysLeftItem.IngredientID] = daysLeftItem;
               return acc;
             }, {})
           : {};
@@ -39,7 +47,7 @@ export default function IngredientsPage() {
             type: item.IngredientType,
             unit: item.Unit,
             quantity: stock.Quantity || 0,
-            expiryDays: stock.ExpiryDays ?? null,  // Adjust key if API uses another name
+            expiryDays: daysLeftMap[item.IngredientID]?.DaysLeft || null
           };
         });
 
@@ -81,7 +89,7 @@ export default function IngredientsPage() {
 
   return (
     <div className="bg-white mt-7 px-4 py-4 rounded-2xl shadow-md mx-auto w-[90%] h-[85vh] overflow-auto">
-      <h2 className="text-xl font-bold mb-2 mt-2 text-gray-800">Ingredients</h2>
+      <h2 className="text-xl font-bold mb-2 mt-2 text-gray-800">Inventory</h2>
 
       {/* Search and Sort Controls */}
       <div className="flex justify-end gap-4 mb-6 flex-wrap">
@@ -170,8 +178,15 @@ export default function IngredientsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-gray-700">{ingredient.quantity}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     { ingredient.expiryDays == null ? (
-                      <span className="text-gray-500 italic">N/A</span>
-                    ) : ingredient.expiryDays <= 2 ? (
+                      <span className="inline-flex px-3 py-1 border border-gray-300 rounded text-xs font-semibold bg-gray-200">
+                        N/A</span>
+                    ) : ingredient.expiryDays < 0 ? (
+                      <span
+                        className="inline-flex px-3 py-1 border border-[#DF0404] rounded text-xs font-semibold"
+                        style={{ backgroundColor: "#FFC5C5", color: "#DF0404" }}
+                      >
+                        Expired
+                      </span> ) : ingredient.expiryDays <= 2 ? (
                       <span
                         className="inline-flex px-3 py-1 border border-[#DF0404] rounded text-xs font-semibold"
                         style={{ backgroundColor: "#FFC5C5", color: "#DF0404" }}
