@@ -31,10 +31,7 @@ app.post('/ingredients', (req, res) => {
     res.status(201).json({ message: 'Ingredient added!', id: this.lastID });
   });
 }); //done
-<<<<<<< HEAD
-=======
 
->>>>>>> 242bc214340a8e9465c2c7ae1e051c876d2f204e
 
 app.get('/ingredients', (req, res) => {
   db.all('SELECT * FROM Ingredients', (err, rows) => {
@@ -90,10 +87,6 @@ app.post('/orders', (req, res) => {
   });
 }); //done
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 242bc214340a8e9465c2c7ae1e051c876d2f204e
 // Add items to an order 
 app.post('/order-items/:OrderID', (req, res) => {
   const OrderID = req.params.OrderID;
@@ -136,13 +129,6 @@ app.post('/order-items/:OrderID', (req, res) => {
 
   if (items.length === 0) res.json({ message: "No items to add" });
 }); //done
-<<<<<<< HEAD
-
-
-
-
-=======
->>>>>>> 242bc214340a8e9465c2c7ae1e051c876d2f204e
 
 // Get all supplier names (or filter by query)
 app.get('/suppliers', (req, res) => {
@@ -160,23 +146,10 @@ app.get('/order-items/:OrderID', (req, res) => {
   const query = `
     SELECT
       ing.IngredientName,
-<<<<<<< HEAD
-      s.CurrentQuantity AS Quantity,
-=======
       s.ItemQuantity,
->>>>>>> 242bc214340a8e9465c2c7ae1e051c876d2f204e
       ing.Unit,
       s.IngredientID as id,
       ing.IngredientType,
-<<<<<<< HEAD
-      o.SpoilageMinDays as spoilageMin,
-      o.SpoilageMaxDays as spoilageMax,
-      s.OrderID
-    FROM IngredientStock s
-    LEFT JOIN OrderInfo o ON s.OrderID = o.OrderID AND s.IngredientID = o.IngredientID
-    JOIN Ingredients ing ON s.IngredientID = ing.IngredientID
-    WHERE s.OrderID = ?
-=======
       s.SpoilageMinDays as spoilageMin,
       s.SpoilageMaxDays as spoilageMax,
       i.OrderID
@@ -184,7 +157,6 @@ app.get('/order-items/:OrderID', (req, res) => {
     LEFT JOIN OrderInfo s ON i.OrderID = s.OrderID AND i.IngredientID = s.IngredientID
     JOIN Ingredients ing ON i.IngredientID = ing.IngredientID
     WHERE i.OrderID = ?
->>>>>>> 242bc214340a8e9465c2c7ae1e051c876d2f204e
   `;
   db.all(query, [OrderID], (err, rows) => {
     if (err) {
@@ -193,7 +165,7 @@ app.get('/order-items/:OrderID', (req, res) => {
     }
     res.json(rows);
   });
-}); //Done
+});
 
 
 //follow-up request for adding ingredient to ingredientstock with the same orderID as the first user input
@@ -203,10 +175,7 @@ app.post('/add-ingredients-to-ingredient-stock', (req, res) => {
     OrderID,
     IngredientID,
     CurrentQuantity,
-<<<<<<< HEAD
-=======
     ItemQuantity,
->>>>>>> 242bc214340a8e9465c2c7ae1e051c876d2f204e
     Unit,
     SpoilageMinDays,
     SpoilageMaxDays
@@ -216,18 +185,6 @@ app.post('/add-ingredients-to-ingredient-stock', (req, res) => {
     INSERT INTO IngredientStock (OrderID, IngredientID, CurrentQuantity)
     VALUES (?, ?, ?)`;
 
-<<<<<<< HEAD
-  db.run(stockQuery, [OrderID, IngredientID, CurrentQuantity, Unit], function(err) {
-    if (err) return res.status(500).send('Error inserting into IngredientStock: ' + err.message);
-
-  const spoilageQuery = `
-    INSERT INTO OrderInfo (OrderID, IngredientID, SpoilageMinDays, SpoilageMaxDays)
-    VALUES (?, ?, ?, ?)`;
-
-  db.run(spoilageQuery, [OrderID, IngredientID, SpoilageMinDays, SpoilageMaxDays], function(err2) {
-    if (err2) return res.status(500).send('Error inserting into SpoilageInfo: ' + err2.message);
-    res.send(`Ingredient and spoilage info added successfully.`);
-=======
   db.run(stockQuery, [OrderID, IngredientID, CurrentQuantity], function(err) {
     if (err) return res.status(500).send('Error inserting into IngredientStock: ' + err.message);
 
@@ -237,7 +194,6 @@ app.post('/add-ingredients-to-ingredient-stock', (req, res) => {
 
   db.run(spoilageQuery, [OrderID, IngredientID, ItemQuantity, SpoilageMinDays, SpoilageMaxDays], function(err2) {
     if (err2) return res.status(500).send('Error inserting into SpoilageInfo: ' + err2.message);
->>>>>>> 242bc214340a8e9465c2c7ae1e051c876d2f204e
 
   const IngredientQuery = `
     INSERT INTO Ingredients (IngredientID, IngredientName, IngredientType, Unit)
@@ -269,18 +225,12 @@ app.get('/ingredients-with-daysleft', (req, res) => {
     FROM IngredientStock s
     JOIN Ingredients i ON s.IngredientID = i.IngredientID
     JOIN Orders o ON s.OrderID = o.OrderID
-<<<<<<< HEAD
-    JOIN OrderInfo oi ON oi.IngredientID = s.IngredientID AND oi.OrderID = s.OrderID
-    WHERE s.CurrentQuantity > 0
-  `;
-=======
     JOIN OrderInfo sp ON sp.IngredientID = s.IngredientID AND sp.OrderID = s.OrderID
     WHERE s.CurrentQuantity > 0
   `; //julianday is for converting todays date to a numeric and then casting it as an integer
   //warning date is the date when the ingredient might start expiring
   //expirydate is the date when the ingredient will expire
 
->>>>>>> 242bc214340a8e9465c2c7ae1e051c876d2f204e
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).send('Error fetching ingredients with days left: ' + err.message);
     res.json(rows);
