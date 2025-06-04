@@ -308,7 +308,7 @@ export default function Dashboard() {
                     />
                     <div>
                       <p className="font-bold">{card.name}</p>
-                      <p className="text-xs">OrderID: {card.batchId} | CurrentQuantity: {card.CurrentQuantity} {card.unit}</p>
+                      <p className="text-xs">OrderID: {card.batchId} | CurrentQuantity: {card.quantity} {card.unit}</p>
                     </div>
                   </div>
                   <span className="text-sm">{label}</span>
@@ -407,7 +407,7 @@ export default function Dashboard() {
                         </div>
 
                       {/* card.unit is N/A by default */}
-                      <span className="text-sm text-gray-600">{card.CurrentQuantity} {card.unit} available</span>
+                      <span className="text-sm text-gray-600">{card.quantity} {card.unit} available</span>
                     </div>
                   </div>
                 ))}

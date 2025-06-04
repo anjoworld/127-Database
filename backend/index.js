@@ -26,6 +26,7 @@ app.get('/', (req, res) => {
 app.post('/ingredients', (req, res) => {
   const { IngredientName, IngredientType, Unit } = req.body;
   const query = `INSERT INTO Ingredients (IngredientName, IngredientType, Unit) VALUES (?, ?, ?)`;
+
   db.run(query, [IngredientName, IngredientType, Unit], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     res.status(201).json({ message: 'Ingredient added!', id: this.lastID });
@@ -75,6 +76,7 @@ app.get('/orders', (req, res) => {
   });
 });
 
+// Create a new order
 app.post('/orders', (req, res) => {
   const { SupplierName, DateReceived } = req.body;
   if (!SupplierName) {
@@ -140,15 +142,16 @@ app.get('/suppliers', (req, res) => {
   });
 });
 
-//View Orders page - Get Order Items for an Order
-app.get('/order-items/:OrderID', (req, res) => {
-  const OrderID = req.params.OrderID;
+//View Orders page
+app.get('/order-items/:orderId', (req, res) => {
+  const orderId = req.params.orderId;
+
   const query = `
     SELECT
       ing.IngredientName,
       s.ItemQuantity,
       ing.Unit,
-      s.IngredientID as id,
+      i.IngredientID as id,
       ing.IngredientType,
       s.SpoilageMinDays as spoilageMin,
       s.SpoilageMaxDays as spoilageMax,
@@ -158,7 +161,8 @@ app.get('/order-items/:OrderID', (req, res) => {
     JOIN Ingredients ing ON i.IngredientID = ing.IngredientID
     WHERE i.OrderID = ?
   `;
-  db.all(query, [OrderID], (err, rows) => {
+
+  db.all(query, [orderId], (err, rows) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({ error: 'Database error' });
@@ -218,10 +222,10 @@ app.get('/ingredients-with-daysleft', (req, res) => {
       s.OrderID,
       s.CurrentQuantity,
       date(o.DateReceived) AS DateReceived,
-      oi.SpoilageMinDays,
-      oi.SpoilageMaxDays,
-      date(julianday(o.DateReceived) + oi.SpoilageMaxDays) AS ExpiryDate,
-      CAST(oi.SpoilageMaxDays - julianday('now') + julianday(o.DateReceived) AS INTEGER) AS DaysLeft 
+      sp.SpoilageMinDays,
+      sp.SpoilageMaxDays,
+      date(julianday(o.DateReceived) + sp.SpoilageMaxDays) AS ExpiryDate,
+      CAST(sp.SpoilageMaxDays - julianday('now') + julianday(o.DateReceived) AS INTEGER) AS DaysLeft 
     FROM IngredientStock s
     JOIN Ingredients i ON s.IngredientID = i.IngredientID
     JOIN Orders o ON s.OrderID = o.OrderID
@@ -235,7 +239,7 @@ app.get('/ingredients-with-daysleft', (req, res) => {
     if (err) return res.status(500).send('Error fetching ingredients with days left: ' + err.message);
     res.json(rows);
   });
-}); //Done
+});
 
 //For the use button in the dashboard - when consuming ingredients - deducts quantity when ingredient is used
 app.post('/use-ingredient', (req, res) => {
@@ -285,7 +289,7 @@ app.get('/ingredient-types', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows.map(r => r.IngredientType));
   });
-}); // Done
+});
 
 // 404 handler
 app.use((req, res) => {
