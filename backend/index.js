@@ -183,6 +183,7 @@ app.get('/ingredients-with-daysleft', (req, res) => {
     JOIN Ingredients i ON s.IngredientID = i.IngredientID
     JOIN Orders o ON s.OrderID = o.OrderID
     JOIN SpoilageInfo sp ON sp.IngredientID = s.IngredientID AND sp.OrderID = s.OrderID
+    WHERE s.Quantity > 0
   `; //julianday is for converting todays date to a numeric and then casting it as an integer
   //warning date is the date when the ingredient might start expiring
   //expirydate is the date when the ingredient will expire
@@ -233,7 +234,10 @@ app.post('/use-ingredient', (req, res) => {
 
 //get all ingredient types and saturate the filters
 app.get('/ingredient-types', (req, res) => {
-  const query = `SELECT DISTINCT IngredientType FROM Ingredients`;
+  const query = `SELECT DISTINCT IngredientType 
+  FROM Ingredients 
+  JOIN IngredientStock ON Ingredients.IngredientID = IngredientStock.IngredientID 
+  WHERE IngredientStock.Quantity > 0`;
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows.map(r => r.IngredientType));

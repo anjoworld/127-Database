@@ -3,11 +3,15 @@
 import { useEffect, useState, useMemo } from "react";
 
 type Ingredient = {
-  id: number;
+  orderID: number;
+  ingredientID: number;
   name: string;
   type: string;
   unit: string;
   quantity: number;
+  expiryDate: string;
+  minSpoil: number;
+  maxSpoil: number;
   expiryDays?: number | null;  // can be null if unknown
 };
 
@@ -15,41 +19,29 @@ export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"id" | "name" | "quantity" | "expiryDays">("id");
+  const [sortBy, setSortBy] = useState<"orderID" | "name" | "quantity" | "expiryDays">("orderID");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
-    Promise.all([
-      fetch("http://localhost:4000/ingredients").then(res => res.json()),
-      fetch("http://localhost:4000/ingredients-stocks").then(res => res.json()),
-      fetch("http://localhost:4000/ingredients-with-daysleft").then(res => res.json())
-    ])
-      .then(([ingredientsData, stocksData, daysLeftData]) => {
-        const stockMap = Array.isArray(stocksData)
-          ? stocksData.reduce((acc: any, stockItem: any) => {
-              acc[stockItem.IngredientID] = stockItem;
-              return acc;
-            }, {})
-          : {};
+      //fetch("http://localhost:4000/ingredients").then(res => res.json()),
+      //fetch("http://localhost:4000/ingredients-stocks").then(res => res.json()),
+      fetch("http://localhost:4000/ingredients-with-daysleft")
+      .then(res => res.json())
+      .then((data) => {
+        console.log("API response:", data);
 
-        const daysLeftMap = Array.isArray(daysLeftData)
-          ? daysLeftData.reduce((acc: any, daysLeftItem: any) => {
-              acc[daysLeftItem.IngredientID] = daysLeftItem;
-              return acc;
-            }, {})
-          : {};
-
-        const merged = ingredientsData.map((item: any) => {
-          const stock = stockMap[item.IngredientID] || {};
-          return {
-            id: item.IngredientID,
-            name: item.IngredientName,
-            type: item.IngredientType,
-            unit: item.Unit,
-            quantity: stock.Quantity || 0,
-            expiryDays: daysLeftMap[item.IngredientID]?.DaysLeft || null
-          };
-        });
+        const merged = data.map((item: any) => ({
+          orderID: item.OrderID,
+          ingredientID: item.IngredientID,
+          name: item.IngredientName,
+          type: item.IngredientType,
+          unit: item.Unit,
+          quantity: item.Quantity,
+          expiryDate: item.ExpiryDate,
+          minSpoil: item.SpoilageMinDays,
+          maxSpoil: item.SpoilageMaxDays,
+          expiryDays: item.DaysLeft + 1,
+        }));
 
         setIngredients(merged);
         setIsLoading(false);
@@ -130,7 +122,7 @@ export default function IngredientsPage() {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
           >
-            <option value="id">ID</option>
+            <option value="id">Order ID</option>
             <option value="name">Name</option>
             <option value="quantity">Quantity</option>
             <option value="expiryDays">Expiry</option>
@@ -151,7 +143,7 @@ export default function IngredientsPage() {
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              {["ID", "Name", "Type", "Unit", "Quantity", "Expiry"].map((header) => (
+              {["Order ID", "Ingredient ID", "Ingredient Name", "Type", "Quantity", "Unit", "Expiry Date", "Status"].map((header) => (
                 <th
                   key={header}
                   className="px-6 py-3 text-left font-semibold text-gray-600 tracking-wider uppercase"
@@ -170,40 +162,43 @@ export default function IngredientsPage() {
               </tr>
             ) : (
               filteredSortedIngredients.map((ingredient) => (
-                <tr key={ingredient.id} className="hover:bg-gray-50 transition duration-200">
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-700">{ingredient.id}</td>
+                <tr key={`${ingredient.orderID}-${ingredient.ingredientID}`} className="hover:bg-gray-50 transition duration-200">
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-700">{ingredient.orderID}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-700">{ingredient.ingredientID}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-800">{ingredient.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-600">{ingredient.type}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600">{ingredient.unit}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-700">{ingredient.quantity}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-700">{ingredient.unit}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-700">{ingredient.expiryDate}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     { ingredient.expiryDays == null ? (
-                      <span className="inline-flex px-3 py-1 border border-gray-300 rounded text-xs font-semibold bg-gray-200">
-                        N/A</span>
+                      <span className="inline-flex px-3 py-1 border border-gray-500 rounded text-xs font-semibold bg-gray-300">
+                        No Expiry Date</span>
                     ) : ingredient.expiryDays < 0 ? (
-                      <span
-                        className="inline-flex px-3 py-1 border border-[#DF0404] rounded text-xs font-semibold"
-                        style={{ backgroundColor: "#FFC5C5", color: "#DF0404" }}
+                      <span //gray
+                        className="inline-flex px-3 py-1 border border-gray-500 rounded text-xs font-semibold text-gray-700 bg-gray-300"
                       >
                         Expired
-                      </span> ) : ingredient.expiryDays <= 2 ? (
+                      </span> ) : ingredient.expiryDays === 0 ? ( //red
                       <span
-                        className="inline-flex px-3 py-1 border border-[#DF0404] rounded text-xs font-semibold"
-                        style={{ backgroundColor: "#FFC5C5", color: "#DF0404" }}
+                        className="inline-flex px-3 py-1 border border-red-500 rounded text-xs font-semibold text-gray-700 bg-red-300"
                       >
-                        {ingredient.expiryDays} {ingredient.expiryDays === 1 ? "Day" : "Days"}
-                      </span>
-                    ) : ingredient.expiryDays <= 4 ? (
+                        EXPIRES TODAY
+                      </span> ) : ingredient.expiryDays > 0 && ingredient.expiryDays <= (ingredient.maxSpoil - ingredient.minSpoil) ? ( //yellow
                       <span
-                        className="inline-flex px-3 py-1 border border-[#877E00]-100 rounded text-xs font-semibold"
-                         style={{ backgroundColor: "#e0dd26", color: "#877E00" }}
+                      className="inline-flex px-3 py-1 border border-yellow-500 rounded text-xs font-semibold text-gray-700 bg-yellow-300"
+                    >
+                      {ingredient.expiryDays} Days
+                    </span>
+                    ) : ingredient.expiryDays > (ingredient.maxSpoil - ingredient.minSpoil) && ingredient.expiryDays < 30 ? ( //green
+                      <span
+                        className="inline-flex px-3 py-1 border border-green-500 rounded text-xs font-semibold text-gray-700 bg-green-300"
                       >
                         {ingredient.expiryDays} Days
                       </span>
                     ) : (
-                      <span
-                        className="inline-flex px-3 py-1 border border-[#008767]-100 rounded text-xs font-semibold"
-                        style={{ backgroundColor: "#72f2d5", color: "#008767" }}
+                      <span //SURGERY HERE
+                        className="inline-flex px-3 py-1 border border-[#0CB2A5] rounded text-xs font-semibold text-gray-700 bg-[#69EDE6]"
                       >
                         {ingredient.expiryDays} Days
                       </span>

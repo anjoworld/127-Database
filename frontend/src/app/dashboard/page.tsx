@@ -16,46 +16,23 @@ export default function Dashboard() {
 
 
   useEffect(() => {
-    Promise.all([
-      fetch('http://localhost:4000/ingredients').then(res => res.json()),
-      fetch('http://localhost:4000/ingredients-stocks').then(res => res.json()),
       fetch('http://localhost:4000/ingredients-with-daysleft').then(res => res.json())
-    ])
-      .then(([ingredients, stocks, dateData]) => {
-        const ingredientMap = ingredients.reduce((acc: any, item: any) => {
-          acc[item.IngredientID] = item;
-          return acc;
-        }, {});
+      .then((data) => {
 
-        // Create a map for DaysLeft
-        const dateMap = dateData.reduce((acc: any, item: any) => {
-          acc[`${item.IngredientID}_${item.OrderID}`] = {
-            daysLeft: item.DaysLeft + 1,
-            dateReceived: item.DateReceived,
-            expiryDate: item.ExpiryDate,
-            minSpoil: item.SpoilageMinDays,
-            maxSpoil: item.SpoilageMaxDays
-          };
-          return acc;
-        }, {});
-
-        const enriched = stocks.map((stockItem: any) => {
-          const ingredient = ingredientMap[stockItem.IngredientID] || {};
-          const dateInfo = dateMap[`${stockItem.IngredientID}_${stockItem.OrderID}`] || {};
-
-          return {
-            id: `${stockItem.IngredientID}_${stockItem.OrderID}`,
-            ingredientId: stockItem.IngredientID,
-            name: ingredient.IngredientName,
-            type: ingredient.IngredientType,
-            batchId: stockItem.OrderID || "N/A",
-            quantity: stockItem.Quantity || 0,
-            unit: ingredient.Unit || "N/A",
-            purchaseDate: dateInfo.dateReceived || "N/A",
-            expiryDate: (dateInfo.expiryDate) || "N/A",
-            daysLeft: dateInfo.daysLeft !== null ? dateInfo.daysLeft :  0 || "N/A",
-            minSpoil: dateInfo.minSpoil || "N/A",
-            maxSpoil: dateInfo.maxSpoil || "N/A"
+        const enriched = data.map((item: any) => {
+            return {
+            id: `${item.IngredientID}_${item.OrderID}`,
+            ingredientId: item.IngredientID,
+            name: item.IngredientName,
+            type: item.IngredientType,
+            batchId: item.OrderID || "N/A",
+            quantity: item.Quantity || 0,
+            unit: item.Unit || "N/A",
+            purchaseDate: item.DateReceived || "N/A",
+            expiryDate: (item.ExpiryDate) || "N/A",
+            daysLeft: item.DaysLeft + 1 !== null ? item.DaysLeft + 1 :  0 || "N/A",
+            minSpoil: item.SpoilageMinDays || "N/A",
+            maxSpoil: item.SpoilageMaxDays || "N/A"
           };
         });
 
@@ -110,7 +87,7 @@ export default function Dashboard() {
     //green otherwise, bigger than 30 days is light blue
     if (days < 0) return "bg-gray-300";
     if (days === 0) return "bg-red-300";
-    if (days < (maxSpoil-minSpoil) && days > 0 ) return "bg-yellow-300";
+    if (days <= (maxSpoil-minSpoil) && days > 0 ) return "bg-yellow-300";
     if (days > (maxSpoil-minSpoil) && days < 30) return "bg-green-300";
     if (days > 30) return "[background-color:#69EDE6]";
     if (days === undefined) return "[background-color:#69EDE6]";
@@ -175,8 +152,10 @@ export default function Dashboard() {
     await Promise.all(itemsToConsume.map(async (card) => {
       // Find the OrderID for this card (batchId)
       const OrderID = card.batchId;
-      const IngredientID = card.id;
+      const IngredientID = card.ingredientId;
       const QuantityUsed = consumeQuantities[card.id];
+
+      console.log({ OrderID, IngredientID, QuantityUsed });
 
       // Send POST request to backend
       await fetch('http://localhost:4000/use-ingredient', {
