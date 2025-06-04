@@ -41,7 +41,7 @@ app.get('/ingredients', (req, res) => {
 });
 
 app.get('/ingredients-stocks', (req, res) => {
-  const query = `SELECT IngredientID, OrderID, Quantity, Location FROM IngredientStock`;
+  const query = `SELECT IngredientID, OrderID, CurrentQuantity FROM IngredientStock`;
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
@@ -110,7 +110,7 @@ app.get('/order-items/:orderId', (req, res) => {
   const query = `
     SELECT
       ing.IngredientName,
-      i.Quantity,
+      s.ItemQuantity,
       ing.Unit,
       i.IngredientID as id,
       ing.IngredientType,
@@ -118,7 +118,7 @@ app.get('/order-items/:orderId', (req, res) => {
       s.SpoilageMaxDays as spoilageMax,
       i.OrderID
     FROM IngredientStock i
-    LEFT JOIN SpoilageInfo s ON i.OrderID = s.OrderID AND i.IngredientID = s.IngredientID
+    LEFT JOIN OrderInfo s ON i.OrderID = s.OrderID AND i.IngredientID = s.IngredientID
     JOIN Ingredients ing ON i.IngredientID = ing.IngredientID
     WHERE i.OrderID = ?
   `;
@@ -173,7 +173,7 @@ app.get('/ingredients-with-daysleft', (req, res) => {
       i.IngredientType,
       i.Unit,
       s.OrderID,
-      s.Quantity,
+      s.CurrentQuantity,
       date(o.DateReceived) AS DateReceived,
       sp.SpoilageMinDays,
       sp.SpoilageMaxDays,
@@ -182,8 +182,8 @@ app.get('/ingredients-with-daysleft', (req, res) => {
     FROM IngredientStock s
     JOIN Ingredients i ON s.IngredientID = i.IngredientID
     JOIN Orders o ON s.OrderID = o.OrderID
-    JOIN SpoilageInfo sp ON sp.IngredientID = s.IngredientID AND sp.OrderID = s.OrderID
-    WHERE s.Quantity > 0
+    JOIN OrderInfo sp ON sp.IngredientID = s.IngredientID AND sp.OrderID = s.OrderID
+    WHERE s.CurrentQuantity > 0
   `; //julianday is for converting todays date to a numeric and then casting it as an integer
   //warning date is the date when the ingredient might start expiring
   //expirydate is the date when the ingredient will expire
@@ -237,7 +237,7 @@ app.get('/ingredient-types', (req, res) => {
   const query = `SELECT DISTINCT IngredientType 
   FROM Ingredients 
   JOIN IngredientStock ON Ingredients.IngredientID = IngredientStock.IngredientID 
-  WHERE IngredientStock.Quantity > 0`;
+  WHERE IngredientStock.CurrentQuantity > 0`;
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows.map(r => r.IngredientType));

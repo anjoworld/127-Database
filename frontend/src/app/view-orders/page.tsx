@@ -57,7 +57,7 @@ export default function ViewOrdersPage() {
         const rawItems = await res.json();
         const mappedItems: Item[] = rawItems.map((item: any) => ({
           name: item.IngredientName,
-          quantity: item.Quantity,
+          quantity: item.ItemQuantity,
           unit: item.Unit,
           id: item.id,
           type: item.IngredientType,

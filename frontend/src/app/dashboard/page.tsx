@@ -18,6 +18,7 @@ export default function Dashboard() {
   useEffect(() => {
       fetch('http://localhost:4000/ingredients-with-daysleft').then(res => res.json())
       .then((data) => {
+        console.log("API response:", data);
 
         const enriched = data.map((item: any) => {
             return {
@@ -26,7 +27,7 @@ export default function Dashboard() {
             name: item.IngredientName,
             type: item.IngredientType,
             batchId: item.OrderID || "N/A",
-            quantity: item.Quantity || 0,
+            quantity: item.CurrentQuantity || 0,
             unit: item.Unit || "N/A",
             purchaseDate: item.DateReceived || "N/A",
             expiryDate: (item.ExpiryDate) || "N/A",
