@@ -31,7 +31,8 @@ app.post('/ingredients', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.status(201).json({ message: 'Ingredient added!', id: this.lastID });
   });
-});
+}); //done
+
 
 app.get('/ingredients', (req, res) => {
   db.all('SELECT * FROM Ingredients', (err, rows) => {
@@ -77,21 +78,59 @@ app.get('/orders', (req, res) => {
 
 // Create a new order
 app.post('/orders', (req, res) => {
-  const { SupplierName } = req.body;
-
+  const { SupplierName, DateReceived } = req.body;
   if (!SupplierName) {
     return res.status(400).json({ error: 'SupplierName is required' });
   }
-
-  const insertQuery = 'INSERT INTO Orders (SupplierName) VALUES (?)';
-
-  db.run(insertQuery, [SupplierName], function (err) {
+  const insertQuery = 'INSERT INTO Orders (SupplierName, DateReceived) VALUES (?, ?)';
+  db.run(insertQuery, [SupplierName, DateReceived], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-
-    // `this.lastID` gives the ID of the inserted row
     res.status(201).json({ orderId: this.lastID });
   });
-});
+}); //done
+
+// Add items to an order 
+app.post('/order-items/:OrderID', (req, res) => {
+  const OrderID = req.params.OrderID;
+  const { items } = req.body;
+  if (!items || !Array.isArray(items)) {
+    return res.status(400).json({ error: "Items array required" });
+  }
+
+  let completed = 0;
+  let hasError = false;
+
+  items.forEach(item => {
+    // Insert into IngredientStock
+    db.run(
+      `INSERT INTO IngredientStock (OrderID, IngredientID, CurrentQuantity) VALUES (?, ?, ?)`,
+      [OrderID, item.id, item.quantity],
+      function (err) {
+        if (err && !hasError) {
+          hasError = true;
+          return res.status(500).json({ error: err.message });
+        }
+        // Insert into OrderInfo
+        db.run(
+          `INSERT INTO OrderInfo (OrderID, IngredientID, SpoilageMinDays, SpoilageMaxDays) VALUES (?, ?, ?, ?)`,
+          [OrderID, item.id, item.spoilageMin, item.spoilageMax],
+          function (err2) {
+            completed++;
+            if (err2 && !hasError) {
+              hasError = true;
+              return res.status(500).json({ error: err2.message });
+            }
+            if (completed === items.length && !hasError) {
+              res.json({ message: "Order items added" });
+            }
+          }
+        );
+      }
+    );
+  });
+
+  if (items.length === 0) res.json({ message: "No items to add" });
+}); //done
 
 // Get all supplier names (or filter by query)
 app.get('/suppliers', (req, res) => {
@@ -132,37 +171,45 @@ app.get('/order-items/:orderId', (req, res) => {
   });
 });
 
+
 //follow-up request for adding ingredient to ingredientstock with the same orderID as the first user input
 //since the user will input min and max for spoiling time, though there isn't any tab yet for that
 app.post('/add-ingredients-to-ingredient-stock', (req, res) => {
   const {
     OrderID,
     IngredientID,
-    Quantity,
+    CurrentQuantity,
+    ItemQuantity,
     Unit,
     SpoilageMinDays,
     SpoilageMaxDays
   } = req.body;
 
   const stockQuery = `
-    INSERT INTO IngredientStock (OrderID, IngredientID, Quantity, Unit)
-    VALUES (?, ?, ?, ?)
-  `;
+    INSERT INTO IngredientStock (OrderID, IngredientID, CurrentQuantity)
+    VALUES (?, ?, ?)`;
 
-  db.run(stockQuery, [OrderID, IngredientID, Quantity, Unit], function(err) {
+  db.run(stockQuery, [OrderID, IngredientID, CurrentQuantity], function(err) {
     if (err) return res.status(500).send('Error inserting into IngredientStock: ' + err.message);
 
-    const spoilageQuery = `
-      INSERT INTO SpoilageInfo (OrderID, IngredientID, SpoilageMinDays, SpoilageMaxDays)
-      VALUES (?, ?, ?, ?)
-    `;
+  const spoilageQuery = `
+    INSERT INTO OrderInfo (OrderID, IngredientID, ItemQuantity, SpoilageMinDays, SpoilageMaxDays)
+    VALUES (?, ?, ?, ?, ?)`;
 
-    db.run(spoilageQuery, [OrderID, IngredientID, SpoilageMinDays, SpoilageMaxDays], function(err2) {
-      if (err2) return res.status(500).send('Error inserting into SpoilageInfo: ' + err2.message);
-      res.send(`Ingredient and spoilage info added successfully.`);
+  db.run(spoilageQuery, [OrderID, IngredientID, ItemQuantity, SpoilageMinDays, SpoilageMaxDays], function(err2) {
+    if (err2) return res.status(500).send('Error inserting into SpoilageInfo: ' + err2.message);
+
+  const IngredientQuery = `
+    INSERT INTO Ingredients (IngredientID, IngredientName, IngredientType, Unit)
+    VALUES (?, ?, ?, ?)`;
+
+    db.run(IngredientQuery, [IngredientID, req.body.IngredientName, req.body.IngredientType, Unit], function(err3) {
+      if (err3) return res.status(500).send('Error inserting into Ingredients: ' + err3.message);
+      res.send(`Ingredient added successfully.`);
     });
   });
-});
+  });
+}); // DONE
 
 //for getting the days-left sa dashboard page
 app.get('/ingredients-with-daysleft', (req, res) => {
@@ -199,7 +246,7 @@ app.post('/use-ingredient', (req, res) => {
   const { OrderID, IngredientID, QuantityUsed } = req.body;
 
   const getQuery = `
-    SELECT s.Quantity, i.IngredientName
+    SELECT s.CurrentQuantity, i.IngredientName
     FROM IngredientStock s
     JOIN Ingredients i ON s.IngredientID = i.IngredientID
     WHERE s.OrderID = ? AND s.IngredientID = ?
@@ -207,7 +254,7 @@ app.post('/use-ingredient', (req, res) => {
 
   const updateQuery = `
     UPDATE IngredientStock
-    SET Quantity = Quantity - ?
+    SET CurrentQuantity = CurrentQuantity - ?
     WHERE OrderID = ? AND IngredientID = ?
   `;
 
@@ -215,7 +262,7 @@ app.post('/use-ingredient', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: 'Stock not found' });
 
-    if (row.Quantity < QuantityUsed) {
+    if (row.CurrentQuantity < QuantityUsed) {
       return res.status(400).json({ error: 'Not enough quantity to use' });
     }
 
@@ -230,7 +277,7 @@ app.post('/use-ingredient', (req, res) => {
       });
     });
   });
-});
+}); //Done
 
 //get all ingredient types and saturate the filters
 app.get('/ingredient-types', (req, res) => {
