@@ -18,6 +18,7 @@ export default function Dashboard() {
   useEffect(() => {
       fetch('http://localhost:4000/ingredients-with-daysleft').then(res => res.json())
       .then((data) => {
+        console.log("API response:", data);
 
         const enriched = data.map((item: any) => {
             return {

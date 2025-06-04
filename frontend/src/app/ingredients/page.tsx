@@ -36,7 +36,7 @@ export default function IngredientsPage() {
           name: item.IngredientName,
           type: item.IngredientType,
           unit: item.Unit,
-          quantity: item.Quantity,
+          quantity: item.CurrentQuantity,
           expiryDate: item.ExpiryDate,
           minSpoil: item.SpoilageMinDays,
           maxSpoil: item.SpoilageMaxDays,
