@@ -26,7 +26,7 @@ export default function Dashboard() {
             name: item.IngredientName,
             type: item.IngredientType,
             batchId: item.OrderID || "N/A",
-            quantity: item.Quantity || 0,
+            quantity: item.CurrentQuantity || 0,
             unit: item.Unit || "N/A",
             purchaseDate: item.DateReceived || "N/A",
             expiryDate: (item.ExpiryDate) || "N/A",
@@ -136,7 +136,7 @@ export default function Dashboard() {
     }));
   };
 
-  const decrementQuantity = (id: number) => {
+  const decrementCurrentQuantity = (id: number) => {
     setConsumeQuantities(prev => ({
       ...prev,
       [id]: Math.max(0, (prev[id] || 0) - 1)
@@ -307,7 +307,7 @@ export default function Dashboard() {
                     />
                     <div>
                       <p className="font-bold">{card.name}</p>
-                      <p className="text-xs">OrderID: {card.batchId} | Quantity: {card.quantity} {card.unit}</p>
+                      <p className="text-xs">OrderID: {card.batchId} | CurrentQuantity: {card.CurrentQuantity} {card.unit}</p>
                     </div>
                   </div>
                   <span className="text-sm">{label}</span>
@@ -327,7 +327,7 @@ export default function Dashboard() {
                 <tbody>
                   <tr>
                     <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Quantity</th>
-                    <td className="py-1 px-2 text-gray-600">{previewIngredient.quantity}</td>
+                    <td className="py-1 px-2 text-gray-600">{previewIngredient.CurrentQuantity}</td>
                   </tr>
                   <tr>
                     <th className="w-1/3 py-2 px-2 bg-gray-50 font-medium text-gray-700">Unit</th>
@@ -382,7 +382,7 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-4"> 
                       <div className="flex items-center space-x-1">
                           <button
-                            onClick={() => decrementQuantity(card.id)}
+                            onClick={() => decrementCurrentQuantity(card.id)}
                             className="px-2 py-1 bg-gray-100 border rounded hover:bg-gray-200"
                             aria-label="Decrease quantity"
                           >
@@ -406,7 +406,7 @@ export default function Dashboard() {
                         </div>
 
                       {/* card.unit is N/A by default */}
-                      <span className="text-sm text-gray-600">{card.quantity} {card.unit} available</span>
+                      <span className="text-sm text-gray-600">{card.CurrentQuantity} {card.unit} available</span>
                     </div>
                   </div>
                 ))}
