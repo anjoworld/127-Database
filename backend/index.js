@@ -184,6 +184,8 @@ app.get('/ingredients-with-daysleft', (req, res) => {
     JOIN Orders o ON s.OrderID = o.OrderID
     JOIN SpoilageInfo sp ON sp.IngredientID = s.IngredientID AND sp.OrderID = s.OrderID
   `; //julianday is for converting todays date to a numeric and then casting it as an integer
+  //warning date is the date when the ingredient might start expiring
+  //expirydate is the date when the ingredient will expire
 
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).send('Error fetching ingredients with days left: ' + err.message);

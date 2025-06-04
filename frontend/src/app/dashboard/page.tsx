@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-const allTypes = ["Canned Goods", "Carbohydrates", "Condiments", "Dairy", "Fruits", "Meat", "Vegetables"];
 
 export default function Dashboard() {
   const [selected, setSelected] = useState<number[]>([]);
@@ -14,6 +12,8 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [previewIngredient, setPreviewIngredient] = useState<any | null>(null);
   const [consumeQuantities, setConsumeQuantities] = useState<{ [id: number]: number }>({});
+  const [allTypes, setAllTypes] = useState<string[]>([]);
+
 
   useEffect(() => {
     Promise.all([
@@ -30,9 +30,11 @@ export default function Dashboard() {
         // Create a map for DaysLeft
         const dateMap = dateData.reduce((acc: any, item: any) => {
           acc[`${item.IngredientID}_${item.OrderID}`] = {
-            daysLeft: item.DaysLeft,
+            daysLeft: item.DaysLeft + 1,
             dateReceived: item.DateReceived,
-            expiryDate: item.ExpiryDate
+            expiryDate: item.ExpiryDate,
+            minSpoil: item.SpoilageMinDays,
+            maxSpoil: item.SpoilageMaxDays
           };
           return acc;
         }, {});
@@ -50,8 +52,10 @@ export default function Dashboard() {
             quantity: stockItem.Quantity || 0,
             unit: ingredient.Unit || "N/A",
             purchaseDate: dateInfo.dateReceived || "N/A",
-            expiryDate: dateInfo.expiryDate || "N/A",
-            daysLeft: dateInfo.daysLeft || "N/A"
+            expiryDate: (dateInfo.expiryDate) || "N/A",
+            daysLeft: dateInfo.daysLeft !== null ? dateInfo.daysLeft :  0 || "N/A",
+            minSpoil: dateInfo.minSpoil || "N/A",
+            maxSpoil: dateInfo.maxSpoil || "N/A"
           };
         });
 
@@ -74,16 +78,42 @@ export default function Dashboard() {
       });
   }, []);
 
+  useEffect(() => {
+    async function fetchAndLogIngredientTypes() {
+      try {
+        const response = await fetch('http://localhost:4000/ingredient-types');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const types = await response.json();
+        console.log('Ingredient Types:', types);
+        setAllTypes(types);
+      } catch (error) {
+        console.error('Error fetching ingredient types:', error);
+      }
+    }
+
+    fetchAndLogIngredientTypes();
+  }, []); // Empty dependency array: runs once on mount
+
+
   const getDayLabel = (days: number) => {
-    if (days <= 0) return "Expired";
+    if (days < 0) return "Expired";
+    if (days === 0) return "EXPIRES TODAY!"
+    if (days === undefined) return "No Expiry Date";
     return `${days} day${days === 1 ? '' : 's'} left`;
   };
 
-  const getCardColor = (days: number) => {
-    if (days <= 0) return "bg-gray-300";
-    if (days <= 2) return "bg-red-300";
-    if (days <= 4) return "bg-yellow-300";
+  const getCardColor = (days: number, minSpoil: number, maxSpoil: number) => {
+    //exact parameters: MEGA RED if expires on the day, gray if expired
+    //yellow if it's within minSpoil and maxSpoil, yellow if its within a week of minSpoil
+    //green otherwise, bigger than 30 days is light blue
+    if (days < 0) return "bg-gray-300";
+    if (days === 0) return "bg-red-300";
+    if (days < (maxSpoil-minSpoil) && days > 0 ) return "bg-yellow-300";
+    if (days > (maxSpoil-minSpoil) && days < 30) return "bg-green-300";
     if (days > 30) return "[background-color:#69EDE6]";
+    if (days === undefined) return "[background-color:#69EDE6]";
     return "bg-green-300";
   };
 
@@ -260,7 +290,7 @@ export default function Dashboard() {
               {filterTypes.map(type => (
                 <div
                   key={type}
-                  className="flex items-center space-x-1 bg-emerald-200 text-emerald-900 px-2 py-1 rounded-full text-sm select-none"
+                  className="flex items-center space-x-1 bg-gray-200 text-black-900 px-2 py-1 rounded-full text-sm select-none"
                 >
                   <span>{type}</span>
                   <button
@@ -277,7 +307,7 @@ export default function Dashboard() {
 
           <div className="space-y-2 overflow-y-auto pr-2 flex-1">
             {filteredIngredients.map((card) => {
-              const color = getCardColor(card.daysLeft);
+              const color = getCardColor(card.daysLeft, card.minSpoil, card.maxSpoil);
               const label = getDayLabel(card.daysLeft);
               return (
                 <div
