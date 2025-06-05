@@ -390,6 +390,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
 
       alert("Order confirmed and saved!");
       onClose();
+      window.location.reload();
     } catch (err) {
       console.error("Failed to confirm set of orders", err);
     }

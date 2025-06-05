@@ -88,7 +88,7 @@ export default function Dashboard() {
     //green otherwise, bigger than 30 days is light blue
     if (days < 0) return "bg-gray-300";
     if (days === 0) return "bg-red-300";
-    if (days <= (maxSpoil-minSpoil) && days > 0 ) return "bg-yellow-300";
+    if (days <= Math.max(maxSpoil-minSpoil, 1) && days > 0 ) return "bg-yellow-300";
     if (days > (maxSpoil-minSpoil) && days < 30) return "bg-green-300";
     if (days > 30) return "[background-color:#69EDE6]";
     if (days === undefined) return "[background-color:#69EDE6]";

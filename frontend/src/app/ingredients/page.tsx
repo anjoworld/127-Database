@@ -184,7 +184,7 @@ export default function IngredientsPage() {
                         className="inline-flex px-3 py-1 border border-red-500 rounded text-xs font-semibold text-gray-700 bg-red-300"
                       >
                         EXPIRES TODAY
-                      </span> ) : ingredient.expiryDays > 0 && ingredient.expiryDays <= (ingredient.maxSpoil - ingredient.minSpoil) ? ( //yellow
+                      </span> ) : ingredient.expiryDays > 0 && ingredient.expiryDays <= Math.max(ingredient.maxSpoil - ingredient.minSpoil, 1) ? ( //yellow
                       <span
                       className="inline-flex px-3 py-1 border border-yellow-500 rounded text-xs font-semibold text-gray-700 bg-yellow-300"
                     >
