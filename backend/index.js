@@ -104,7 +104,7 @@ app.post('/order-items/:OrderID', (req, res) => {
     // Insert into IngredientStock
     db.run(
       `INSERT INTO IngredientStock (OrderID, IngredientID, CurrentQuantity) VALUES (?, ?, ?)`,
-      [OrderID, item.id, item.quantity],
+      [OrderID, item.id, item.CurrentQuantity],
       function (err) {
         if (err && !hasError) {
           hasError = true;
@@ -112,8 +112,8 @@ app.post('/order-items/:OrderID', (req, res) => {
         }
         // Insert into OrderInfo
         db.run(
-          `INSERT INTO OrderInfo (OrderID, IngredientID, SpoilageMinDays, SpoilageMaxDays) VALUES (?, ?, ?, ?)`,
-          [OrderID, item.id, item.spoilageMin, item.spoilageMax],
+          `INSERT INTO OrderInfo (OrderID, IngredientID, ItemQuantity, SpoilageMinDays, SpoilageMaxDays) VALUES (?, ?, ?, ?, ?)`,
+          [OrderID, item.id, item.ItemQuantity, item.spoilageMin, item.spoilageMax],
           function (err2) {
             completed++;
             if (err2 && !hasError) {

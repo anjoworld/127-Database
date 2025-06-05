@@ -326,6 +326,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
     const itemsToSend = orderItems.map(item => ({
       IngredientName: item.name,
       ItemQuantity: Number(item.quantity) || 0,
+      CurrentQuantity: Number(item.quantity) || 0,
       Unit: item.unit,
       id: Number(item.id),
       IngredientType: item.type,
@@ -639,7 +640,17 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                     </div>
                     <button
                       onClick={() => {
-                        setOrderItems([...orderItems, newIngredient]);
+                        setOrderItems([...orderItems, 
+                          {
+                            name:newIngredient.name,
+                            quantity: newIngredient.quantity,
+                            unit: newOrderItem.unit || "",
+                            id: "",
+                            type: "",
+                            spoilageMin: newIngredient.spoilageMin,
+                            spoilageMax: newIngredient.spoilageMax,
+                          }
+                        ]);
                         setNewIngredient({
                           name: "",
                           quantity: 0,
