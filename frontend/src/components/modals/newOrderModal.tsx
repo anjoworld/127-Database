@@ -5,7 +5,9 @@ import React, { useEffect, useState } from "react";
 export default function NewOrderModal({ onClose }: { onClose: () => void }) {
   const [orderId, setOrderId] = useState<number | null>(null);
   const [supplierName, setSupplierName] = useState("");
+  const [dateReceived, setDateReceived] = useState<string>("");
   const [confirmed, setConfirmed] = useState(false);
+
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -21,6 +23,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
 
   const [ingredientTouched, setIngredientTouched] = useState(false);
   const [isIngredientUnknown, setIsIngredientUnknown] = useState(false);
+
 
   const [newOrderItem, setNewOrderItem] = useState({
     name: "",
@@ -104,7 +107,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
       const res = await fetch("http://localhost:4000/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ SupplierName: supplierName }),
+        body: JSON.stringify({ SupplierName: supplierName, DateReceived: dateReceived }),
       });
 
       const data = await res.json();
@@ -417,12 +420,19 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                   ))}
                 </ul>
               )}
+            <label className="text-gray-500 font-light text-sm ml-2">Date Received:</label>
+            <input 
+              type="date"
+              className="border border-gray-400 rounded-sm px-2 py-1 w-40 text-sm"
+              value={dateReceived}
+              onChange={e => setDateReceived(e.target.value)}
+            />
             </div>
             <button
               onClick={handleCreateOrder}
               className="bg-gray-300 hover:bg-gray-400 text-black font-medium text-sm px-4 py-2 ml-5 rounded-sm"
             >
-              Confirm Supplier
+              Confirm Details
             </button>
           </div>
         )}
