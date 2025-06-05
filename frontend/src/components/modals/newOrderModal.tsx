@@ -316,6 +316,43 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
     ));
   };
 
+  const handleConfirmOrder = async () => {
+    if (!orderId) {
+      alert("OrderID is missing. Please confirm supplier first.");
+      return;
+    }
+
+    // Prepare items in the required format
+    const itemsToSend = orderItems.map(item => ({
+      IngredientName: item.name,
+      ItemQuantity: Number(item.quantity) || 0,
+      Unit: item.unit,
+      id: Number(item.id),
+      IngredientType: item.type,
+      spoilageMin: item.spoilageMin,
+      spoilageMax: item.spoilageMax,
+      OrderID: orderId
+    }));
+
+    try {
+      const res = await fetch(`http://localhost:4000/order-items/${orderId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: itemsToSend }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
+      }
+
+      alert("Order confirmed and saved!");
+      onClose();
+    } catch (err) {
+      console.error("Failed to confirm set of orders", err);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-[#f5f6fa] rounded-md w-[1000px] p-8 relative shadow-lg">
@@ -338,9 +375,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
 
             {orderItems.length > 0 && (
               <button
-                onClick={() => {
-                  console.log("Order confirmed!", orderItems);
-                }}
+                onClick={handleConfirmOrder} 
                 className="bg-gray-300 hover:bg-gray-400 text-black font-medium text-sm px-4 py-2 mr-5 rounded-sm"
               >
                 Confirm Order
