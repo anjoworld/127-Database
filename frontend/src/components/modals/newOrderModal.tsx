@@ -374,6 +374,8 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
       OrderID: orderId
     }));
 
+    console.log("itemsToSend", itemsToSend);
+
     try {
       const res = await fetch(`http://localhost:4000/order-items/${orderId}`, {
         method: "POST",
@@ -638,6 +640,13 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
 
               <button
                 onClick={() => {
+                  const alreadyExists = orderItems.some(
+                    item => item.name.trim().toLowerCase() === newOrderItem.name.trim().toLowerCase()
+                  );
+                  if (alreadyExists) {
+                    alert("Ingredient already exists in the order.");
+                    return;
+                  }
                   setOrderItems([...orderItems, newOrderItem]);
                   setNewOrderItem({
                     name: "",
@@ -671,7 +680,7 @@ export default function NewOrderModal({ onClose }: { onClose: () => void }) {
                         type="text"
                         placeholder=""
                         value={newIngredient.name}
-                        onChange={(e) => setNewIngredient({ ...newIngredient, name: e.target.value })}
+                        readOnly
                         className="w-full border px-2 py-1 rounded"
                       />
                     </div>
