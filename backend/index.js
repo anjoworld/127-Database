@@ -151,15 +151,14 @@ app.get('/order-items/:orderId', (req, res) => {
       ing.IngredientName,
       s.ItemQuantity,
       ing.Unit,
-      i.IngredientID as id,
+      s.IngredientID as id,
       ing.IngredientType,
       s.SpoilageMinDays as spoilageMin,
       s.SpoilageMaxDays as spoilageMax,
-      i.OrderID
-    FROM IngredientStock i
-    LEFT JOIN OrderInfo s ON i.OrderID = s.OrderID AND i.IngredientID = s.IngredientID
-    JOIN Ingredients ing ON i.IngredientID = ing.IngredientID
-    WHERE i.OrderID = ?
+      s.OrderID
+
+    FROM OrderInfo s JOIN Ingredients ing ON s.IngredientID = ing.IngredientID 
+    WHERE s.OrderID = ?  
   `;
 
   db.all(query, [orderId], (err, rows) => {
@@ -170,7 +169,6 @@ app.get('/order-items/:orderId', (req, res) => {
     res.json(rows);
   });
 });
-
 
 //follow-up request for adding ingredient to ingredientstock with the same orderID as the first user input
 //since the user will input min and max for spoiling time, though there isn't any tab yet for that
@@ -258,6 +256,11 @@ app.post('/use-ingredient', (req, res) => {
     WHERE OrderID = ? AND IngredientID = ?
   `;
 
+  const deleteQuery = `
+    DELETE FROM IngredientStock
+    WHERE OrderID = ? AND IngredientID = ?
+  `;
+  
   db.get(getQuery, [OrderID, IngredientID], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: 'Stock not found' });
@@ -269,12 +272,26 @@ app.post('/use-ingredient', (req, res) => {
     db.run(updateQuery, [QuantityUsed, OrderID, IngredientID], function(err) {
       if (err) return res.status(500).json({ error: err.message });
 
+      //check for new quantity
+      const newQuantity = row.CurrentQuantity - QuantityUsed;
+      if (newQuantity <= 0) {
+        db.run(deleteQuery, [OrderID, IngredientID], function(err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({
+            message: `Ingredient '${row.IngredientName}' used successfully`,
+            IngredientName: row.IngredientName,
+            OrderID,
+            QuantityUsed
+          });
+        });
+      } else {
       res.json({
         message: `Ingredient '${row.IngredientName}' used successfully`,
         IngredientName: row.IngredientName,
         OrderID,
         QuantityUsed
       });
+    }
     });
   });
 }); //Done
@@ -288,6 +305,25 @@ app.get('/ingredient-types', (req, res) => {
   db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows.map(r => r.IngredientType));
+  });
+});
+
+app.delete('/orders/:orderId', (req, res) => {
+  const orderId = req.params.orderId;
+  db.run('DELETE FROM Orders WHERE OrderID = ?', [orderId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+
+  //unincrements once from the autoincrement
+  db.run('UPDATE sqlite_sequence SET seq = seq - 1 WHERE name = "Orders"', [], function(err2) {
+    if (err2) return res.status(500).json({ error: err2.message });
+   res.json({ message: 'Order deleted and autoincrement decremented by 1.' });
+  });
+
+    // Reset autoincrement (optional, only if no rows left or you want to force it)
+    //db.run('DELETE FROM sqlite_sequence WHERE name="Orders"', [], function(err2) {
+    //  if (err2) return res.status(500).json({ error: err2.message });
+    //  res.json({ message: 'Order deleted and autoincrement reset.' });
+    //});
   });
 });
 

@@ -122,26 +122,39 @@ export default function Dashboard() {
     );
   };
 
-  const handleQuantityChange = (id: number, newQuantity: number) => {
-  if (newQuantity < 0) return; // prevent negative quantities
+  const handleQuantityChange = (id: number, newQuantity: number, maxQuantity: number) => {
+  let adjustedQuantity = newQuantity;
+  if (newQuantity < 0) 
+  {
+    adjustedQuantity = maxQuantity;
+  } 
+  else if (newQuantity > maxQuantity)
+  {
+    adjustedQuantity = maxQuantity;
+  }// prevent negative quantities
   setConsumeQuantities(prev => ({
     ...prev,
-    [id]: newQuantity
+    [id]: adjustedQuantity
   }));
 };
 
-  const incrementQuantity = (id: number) => {
-    setConsumeQuantities(prev => ({
-      ...prev,
-      [id]: (prev[id] || 0) + 1
-    }));
+  const incrementQuantity = (id: number, maxQuantity: number) => {
+    setConsumeQuantities(prev => {
+      const current = prev[id] || 0;
+      if (current >= maxQuantity) return {...prev, [id]: 0};
+      return {    
+        ...prev,
+        [id]: current + 1
+      };
+    });
   };
 
-  const decrementCurrentQuantity = (id: number) => {
-    setConsumeQuantities(prev => ({
-      ...prev,
-      [id]: Math.max(0, (prev[id] || 0) - 1)
-    }));
+  const decrementCurrentQuantity = (id: number, maxQuantity: number) => {
+    setConsumeQuantities(prev => {
+      const current = prev[id] || 0;
+      if (current <= 0) return {...prev, [id]: maxQuantity};
+      return {...prev, [id]: current - 1}
+    });
   };
 
   const handleConfirmConsume = async () => {
@@ -383,7 +396,7 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-4"> 
                       <div className="flex items-center space-x-1">
                           <button
-                            onClick={() => decrementCurrentQuantity(card.id)}
+                            onClick={() => decrementCurrentQuantity(card.id, card.quantity)}
                             className="px-2 py-1 bg-gray-100 border rounded hover:bg-gray-200"
                             aria-label="Decrease quantity"
                           >
@@ -394,11 +407,11 @@ export default function Dashboard() {
                             type="number"
                             className="w-12 text-center border rounded [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             value={consumeQuantities[card.id] !== undefined ? consumeQuantities[card.id] : ""}
-                            onChange={(e) => handleQuantityChange(card.id, parseInt(e.target.value) || 0)}
+                            onChange={(e) => handleQuantityChange(card.id, parseInt(e.target.value) || 0, card.quantity)}
                           />
 
                           <button
-                            onClick={() => incrementQuantity(card.id)}
+                            onClick={() => incrementQuantity(card.id, card.quantity)}
                             className="px-2 py-1 bg-gray-100 border rounded hover:bg-gray-200"
                             aria-label="Increase quantity"
                           >
